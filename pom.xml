@@ -21,10 +21,10 @@
 
 		<java.version>1.8</java.version>
 
-		<!-- site.maven.plugin config -->
-		<github.site.dryRun>${skipDeploy}</github.site.dryRun>
-		<github.global.server>ms-git</github.global.server>
-		
+		<!-- specify dryRun as uploading fails due to issues in site-maven-plugin -->
+		<github.site.dryRun>true</github.site.dryRun>
+		<github.global.server>github</github.global.server>
+		<!-- setup absolute path to repository folder -->
 		<repo.folder>/Code/repositories</repo.folder>
 	</properties>
 
@@ -50,6 +50,9 @@
 	<build>
 		<plugins>
 		<!-- this plug-in has issues with username / author / committer / whatever property/name is null might be
+		see https://github.com/github/maven-plugins/issues/85
+		None of the mentioned workaround worked.. :/ so for now just execute a dryRun and 
+		manually commit and push mvn-repo -->
 			<plugin>
 	            <groupId>com.github.github</groupId>
 	            <artifactId>site-maven-plugin</artifactId>
@@ -57,7 +60,7 @@
 	            <configuration>
 	            	<repositoryName>mvn-repo</repositoryName>
 	            	<branch>refs/heads/master</branch>
-	            	<outputDirectory>${project.basedir}/../mvn-repo</outputDirectory>
+	            	<outputDirectory>${repo.folder}/mvn-repo</outputDirectory>
 	                <message>Maven artifacts for ${project.artifactId}.${project.version}</message>
 	                <includes>
 	                	<include>shapshots/**/*</include>
@@ -78,7 +81,6 @@
 	              </execution>
 	            </executions>
 	        </plugin>
- 		-->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-enforcer-plugin</artifactId>
