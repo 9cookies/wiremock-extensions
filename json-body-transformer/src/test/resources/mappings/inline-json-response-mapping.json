@@ -1,0 +1,31 @@
+{
+	"uuid": "daee68cb-af5c-4540-b8be-082c63a1502a",
+	"request": {
+		"url": "/inline/response",
+		"method": "POST",
+		"bodyPatterns": [
+			{ "matchesJsonPath": "$.string" },
+			{ "matchesJsonPath": "$.boolean" },
+			{ "matchesJsonPath": "$.datetime" },
+			{ "matchesJsonPath": "$.number" }
+		]
+	},
+	"response": {
+		"status" : 201,
+		"jsonBody" : {
+			"string": "$(string)",
+			"nullstring": "$(nullstring)",
+			"boolean": "$(boolean)",
+			"nullboolean": "$(nullboolean)",
+			"datetime": "$(datetime)",
+			"nulldatetime": "$(nulldatetime)",
+			"number": "$(number)",
+			"nullnumber": "$(nullnumber)"
+		},
+		"headers": {
+			"Content-Type": "application/json",
+			"Status": "201 Created"
+		},
+		"transformers" : ["json-body-transformer"]
+	}
+}

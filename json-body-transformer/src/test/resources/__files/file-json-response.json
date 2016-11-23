@@ -1,0 +1,10 @@
+{
+	"string": "$(string)",
+	"nullstring": "$(nullstring)",
+	"boolean": "$(boolean)",
+	"nullboolean": "$(nullboolean)",
+	"datetime": "$(datetime)",
+	"nulldatetime": "$(nulldatetime)",
+	"number": "$(number)",
+	"nullnumber": "$(nullnumber)"
+}

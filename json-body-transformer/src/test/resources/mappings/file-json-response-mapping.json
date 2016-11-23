@@ -1,0 +1,22 @@
+{
+	"uuid": "2eb9a093-35ad-412b-ba70-5da5fd3e0e7d",
+	"request": {
+		"url": "/file/response",
+		"method": "POST",
+		"bodyPatterns": [
+			{ "matchesJsonPath": "$.string" },
+			{ "matchesJsonPath": "$.boolean" },
+			{ "matchesJsonPath": "$.datetime" },
+			{ "matchesJsonPath": "$.number" }
+		]
+	},
+	"response": {
+		"status" : 201,
+		"bodyFileName" : "file-json-response.json",
+		"headers": {
+			"Content-Type": "application/json",
+			"Status": "201 Created"
+		},
+		"transformers" : ["json-body-transformer"]
+	}
+}
