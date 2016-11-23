@@ -1,6 +1,6 @@
 # Change Log
 
-## 2016-11-xx - Release of initial version
+## 2016-11-23 - Release of initial version
 
 Important Notes: none
 
