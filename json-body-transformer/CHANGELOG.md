@@ -1,5 +1,17 @@
 # Change Log
 
+## 2016-11-23 -
+
+Important Notes: none
+
+Version: 0.0.2
+
+Author: M.Scheepers
+
+### Changes
+
+
+
 ## 2016-11-23 - Release of initial version
 
 Important Notes: none
