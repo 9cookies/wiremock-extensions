@@ -1,6 +1,8 @@
 package com.ninecookies.wiremock.extensions;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,7 +31,10 @@ public class JsonBodyTransformer extends ResponseTransformer {
 
 	private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
-	private final Pattern interpolationPattern = Pattern.compile("\\$\\(.*?\\)");
+	private final Pattern instantPlusPattern = Pattern
+			.compile("\\$\\(!Instant\\.plus\\[([HhMmSs]{1})([0-9\\-]+)\\]\\)");
+
+	private final Pattern responsePattern = Pattern.compile("\\$\\(.*?\\)");
 
 	@Override
 	public Response transform(Request request, Response response, FileSource files, Parameters parameters) {
@@ -47,7 +52,7 @@ public class JsonBodyTransformer extends ResponseTransformer {
 
 		// read all JSON path definitions from response and find counterparts in request
 		String responseBody = response.getBodyAsString();
-		Map<String, Object> responseJsonPaths = readResponseJsonPaths(responseBody);
+		Map<String, Object> responseJsonPaths = readResponsePatterns(responseBody);
 		mapRequestJsonPaths(responseJsonPaths, request.getBodyAsString());
 		String transformedResponseBody = transformJsonResponse(responseJsonPaths, responseBody);
 
@@ -74,13 +79,13 @@ public class JsonBodyTransformer extends ResponseTransformer {
 		return result;
 	}
 
-	private Map<String, Object> readResponseJsonPaths(String responseBody) {
+	private Map<String, Object> readResponsePatterns(String responseBody) {
 		Map<String, Object> result = new LinkedHashMap<>();
-		Matcher matcher = interpolationPattern.matcher(responseBody);
+		Matcher matcher = responsePattern.matcher(responseBody);
 		while (matcher.find()) {
 			String group = matcher.group();
 			if (result.containsKey(group)) {
-				LOG.warn("warning: '{}' already contained in map", group);
+				LOG.warn("ignoring redundant response pattern '{}'", group);
 			} else {
 				result.put(group, null);
 			}
@@ -103,15 +108,43 @@ public class JsonBodyTransformer extends ResponseTransformer {
 			} else if ("$(!UUID)".equals(entry.getKey())) {
 				entry.setValue(UUID.randomUUID().toString());
 			} else {
-				// convert JSON replacement pattern to JsonPath expression
-				String path = entry.getKey().replaceFirst("\\$\\(", "\\$\\."); // change $( to // $.
-				path = path.substring(0, path.length() - 1); // remove trailing )
-				Object value = requestJsonPath.read(path);
-				LOG.debug("value for path '{}' is '{}' of type '{}'", path, value,
-						(value == null) ? null : value.getClass());
-				entry.setValue(value);
+				Matcher instantPlusMatcher = instantPlusPattern.matcher(entry.getKey());
+				if (instantPlusMatcher.matches()) {
+					// group 1 is the unit (H(our)|M(inute)|S(econd))
+					// group 2 is the amount (negative value is allowed)
+					String unit = instantPlusMatcher.group(1);
+					String amount = instantPlusMatcher.group(2);
+					Duration duration = Duration.of(Long.parseLong(amount), stringToChronoUnit(unit));
+					LOG.debug("unit for '{}' is '{}' with amount '{}' yields to {}",
+							entry.getKey(), unit, amount, duration);
+					entry.setValue(Instant.now().plus(duration).toString());
+				} else {
+					// convert JSON replacement pattern to JsonPath expression
+					String path = entry.getKey().replaceFirst("\\$\\(", "\\$\\."); // change $( to // $.
+					path = path.substring(0, path.length() - 1); // remove trailing )
+					Object value = requestJsonPath.read(path);
+					LOG.debug("value for path '{}' is '{}' of type '{}'", path, value,
+							(value == null) ? null : value.getClass());
+					entry.setValue(value);
+				}
 			}
 		}
 		return map;
+	}
+
+	private ChronoUnit stringToChronoUnit(String unit) {
+		switch (unit) {
+		case "H":
+		case "h":
+			return ChronoUnit.HOURS;
+		case "M":
+		case "m":
+			return ChronoUnit.MINUTES;
+		case "S":
+		case "s":
+			return ChronoUnit.SECONDS;
+		default:
+			throw new IllegalArgumentException("Invalid unit for duration '" + unit + "'.");
+		}
 	}
 }

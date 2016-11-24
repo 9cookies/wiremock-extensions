@@ -24,14 +24,14 @@
 		<!-- specify dryRun as uploading fails due to issues in site-maven-plugin -->
 		<github.site.dryRun>true</github.site.dryRun>
 		<github.global.server>github</github.global.server>
-		<!-- setup absolute path to repository folder -->
+		<!-- setup absolute path to parent folder of mvn-repo repository -->
 		<repo.folder>/Code/repositories</repo.folder>
 	</properties>
 
 	<scm>
-		<connection>scm:git:ssh://github.com/mscookies/wiremock-extensions.git</connection>
-		<developerConnection>scm:git:ssh://github.com/mscookies/wiremock-extensions.git</developerConnection>
-		<url>https://github.com/mscookies/wiremock-extensions</url>
+		<connection>scm:git:ssh://github.com/9cookies/wiremock-extensions.git</connection>
+		<developerConnection>scm:git:ssh://github.com/9cookies/wiremock-extensions.git</developerConnection>
+		<url>https://github.com/9cookies/wiremock-extensions</url>
 	</scm>
 	
 	<distributionManagement>
@@ -51,7 +51,7 @@
 		<plugins>
 		<!-- this plug-in has issues with username / author / committer / whatever property/name is null might be
 		see https://github.com/github/maven-plugins/issues/85
-		None of the mentioned workaround worked.. :/ so for now just execute a dryRun and 
+		None of the mentioned workarounds worked.. :/ so for now just execute a dryRun and 
 		manually commit and push mvn-repo -->
 			<plugin>
 	            <groupId>com.github.github</groupId>

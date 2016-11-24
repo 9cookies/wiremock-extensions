@@ -25,6 +25,7 @@ The JSON of a response body referencing the value of `age` might look like
     "found_age": "$(age)"
 }
 ``` 
+
 ### Data Type Handling
 
 As the request pattern is always a string value it has to be quoted even for numbers, booleans, a.s.o.. The `JsonBodyTransformer` will take care of the resulting data type and adds quotes if necessary and will omit them if required.
@@ -38,7 +39,7 @@ For the example above that will mean a response like
     "found_name": "$(lastname)"
 }
 ```
-will be parsed as
+will be returned as
 ```JSON
 {
     "found_age": 35,
@@ -117,26 +118,38 @@ Similar in JSON
 ```
 
 ### Additional features
+To get even more generic responses that help better testing the transformer defines some key words that start with an exclamation mark `!`.
+
 Generating random integer for a response property
 ```JSON
-{
-    "id": $(!Random)
-}
+{ "id": "$(!Random)" }
 ```
 
-Generating current timestamp for a response property
+Generating random UUID for a response property
 ```JSON
-{
-    "created": "$(!Instant)"
-}
+{ "uuid": "$(!UUID)" }
 ```
 
-Generating UUID for a response property
+Generating current time stamp for a response property
+```JSON
+{ "created": "$(!Instant)" }
+```
+
+Generating computed time stamp for a response property using the response pattern `$(!Instant.plus[UNITAMOUNT])`
+where `UNIT` indicates the time unit and `AMOUNT` the amount to add or subtract. Valid units are `s`, `m` and `h`
+for seconds, minutes and hours. Units are case insensitive. Amount might be positive or negative depending on whether
+the desired result should be in the past or in the future.
 ```JSON
 {
-    "uuid": "$(!UUID)"
+    "one_second_in_future": "$(!Instant.plus[s1])",
+    "one_second_in_past": "$(!Instant.plus[s-1])",
+    "one_minute_in_future":  "$(!Instant.plus[m1])",
+    "one_minute_in_past":  "$(!Instant.plus[m-1])",
+    "one_hour_in_future":  "$(!Instant.plus[h1])",
+    "one_hour_in_past":  "$(!Instant.plus[h-1])"
 }
 ```
+Note that all time stamps are returned as Strings in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) UTC format.
 
 ### Maven usage
 
@@ -144,16 +157,16 @@ This extension is not hosted on Maven central but on github. To use this artifac
 
 ```XML
 <repository>
-	<id>ms-snapshots</id>
-    <url>https://raw.github.com/mscookies/mvn-repo/master/snapshots/</url>
+	<id>9c-snapshots</id>
+    <url>https://raw.github.com/9ccookies/mvn-repo/master/snapshots/</url>
     <snapshots>
         <enabled>true</enabled>
         <updatePolicy>always</updatePolicy>
     </snapshots>
 </repository>
 <repository>
-    <id>ms-releases</id>
-    <url>https://raw.github.com/mscookies/mvn-repo/master/releases/</url>
+    <id>9c-releases</id>
+    <url>https://raw.github.com/9ccookies/mvn-repo/master/releases/</url>
     <releases>
         <enabled>true</enabled>
         <updatePolicy>always</updatePolicy>
@@ -177,16 +190,16 @@ Add the following dependency to your projects `pom.xml` file.
 ```XML
 <pluginRepositories>
     <pluginRepository>
-        <id>ms-snapshots</id>
-        <url>https://raw.github.com/mscookies/mvn-repo/master/snapshots/</url>
+        <id>9c-snapshots</id>
+        <url>https://raw.github.com/9cookies/mvn-repo/master/snapshots/</url>
         <snapshots>
             <enabled>true</enabled>
             <updatePolicy>always</updatePolicy>
         </snapshots>
     </pluginRepository>
     <pluginRepository>
-        <id>ms-releases</id>
-        <url>https://raw.github.com/mscookies/mvn-repo/master/releases/</url>
+        <id>9c-releases</id>
+        <url>https://raw.github.com/9cookies/mvn-repo/master/releases/</url>
         <releases>
             <enabled>true</enabled>
             <updatePolicy>always</updatePolicy>

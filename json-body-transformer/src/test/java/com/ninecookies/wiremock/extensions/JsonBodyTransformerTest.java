@@ -8,6 +8,10 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static com.jayway.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isA;
+import static org.testng.Assert.assertEquals;
+
+import java.time.Duration;
+import java.time.Instant;
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -35,11 +39,16 @@ public class JsonBodyTransformerTest {
 			+ "\"boolean\": true, " + "\"datetime\": \"2016-09-26T14:30:22.447Z\", " + "\"number\": 12345, "
 			+ "\"more\": { \"string\": \"value\", \"boolean\": true, \"number\": 12345 } } }";
 
+	private static final String INSTANT_RESPONSE_SCHEMA = "{\"$schema\": \"http://json-schema.org/draft-03/schema#\","
+			+ "\"type\":\"object\",\"properties\":{\"instant\":{\"type\":\"string\",\"format\":\"date-time\","
+			+ "\"required\":true}}}";
+
 	private WireMockServer wireMockServer;
 
 	@BeforeClass
 	public void beforeClass() {
 		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
+		System.setProperty("org.slf4j.simpleLogger.log.com.ninecookies.wiremock.extensions", "info");
 
 		wireMockServer = new WireMockServer(wireMockConfig().port(SERVER_PORT).extensions(new JsonBodyTransformer()));
 		wireMockServer.start();
@@ -314,23 +323,6 @@ public class JsonBodyTransformerTest {
 	}
 
 	@Test
-	public void injectInstant() {
-		String responseBodySchema = "{\"$schema\": \"http://json-schema.org/draft-03/schema#\",\"type\":\"object\","
-				+ "\"properties\":{\"instantNow\":{\"type\":\"string\",\"format\":\"date-time\",\"required\":true}}}";
-		String responseBody = "{\"instantNow\":\"$(!Instant)\"}";
-		String requestBody = "{}";
-
-		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
-				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
-
-		Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
-
-		response.then().statusCode(200).body(JsonSchemaValidator.matchesJsonSchema(responseBodySchema));
-
-		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
-	}
-
-	@Test
 	public void injectUUID() {
 		String responseBody = "{\"id\": \"$(!UUID)\"}";
 		String requestBody = "{}";
@@ -345,4 +337,116 @@ public class JsonBodyTransformerTest {
 		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
 	}
 
+	@Test
+	public void injectInstant() {
+		String responseBody = "{\"instant\":\"$(!Instant)\"}";
+		String requestBody = "{}";
+		Instant expectedInstant = Instant.now();
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+		Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
+		Instant instant = Instant.parse(response.then().statusCode(200)
+				.body(JsonSchemaValidator.matchesJsonSchema(INSTANT_RESPONSE_SCHEMA))
+				.and().body("instant", isA(String.class)).extract().path("instant"));
+		assertEquals(Duration.between(instant, expectedInstant).plus(Duration.ofMillis(999)).getSeconds(), 0);
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void injectInstantPlusOneSecond() {
+		Instant expectedInstant = Instant.now().plus(Duration.ofSeconds(1));
+		String unitAmount = "s1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+
+		expectedInstant = Instant.now().plus(Duration.ofSeconds(1));
+		unitAmount = "S1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+	}
+
+	@Test
+	public void injectInstantPlusOneMinute() {
+		Instant expectedInstant = Instant.now().plus(Duration.ofMinutes(1));
+		String unitAmount = "m1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+
+		expectedInstant = Instant.now().plus(Duration.ofMinutes(1));
+		unitAmount = "M1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+	}
+
+	@Test
+	public void injectInstantPlusOneHour() {
+		Instant expectedInstant = Instant.now().plus(Duration.ofHours(1));
+		String unitAmount = "h1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+
+		expectedInstant = Instant.now().plus(Duration.ofHours(1));
+		unitAmount = "H1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+	}
+
+	@Test
+	public void injectInstantMinusOneSecond() {
+		Instant expectedInstant = Instant.now().plus(Duration.ofSeconds(-1));
+		String unitAmount = "s-1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+
+		expectedInstant = Instant.now().plus(Duration.ofSeconds(-1));
+		unitAmount = "S-1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+	}
+
+	@Test
+	public void injectInstantMinusOneMinute() {
+		Instant expectedInstant = Instant.now().plus(Duration.ofMinutes(-1));
+		String unitAmount = "m-1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+
+		expectedInstant = Instant.now().plus(Duration.ofMinutes(-1));
+		unitAmount = "M-1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+	}
+
+	@Test
+	public void injectInstantMinusOneHour() {
+		Instant expectedInstant = Instant.now().plus(Duration.ofHours(-1));
+		String unitAmount = "h-1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+
+		expectedInstant = Instant.now().plus(Duration.ofHours(-1));
+		unitAmount = "H-1";
+		assertInstantComputeation(unitAmount, expectedInstant);
+	}
+
+	private void assertInstantComputeation(String unitAmount, Instant expectedInstant) {
+		String responseBody = "{\"instant\":\"$(!Instant.plus[" + unitAmount + "])\"}";
+		String requestBody = "{}";
+
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
+		Instant instant = Instant.parse(response.then().statusCode(200)
+				.body(JsonSchemaValidator.matchesJsonSchema(INSTANT_RESPONSE_SCHEMA))
+				.and().body("instant", isA(String.class)).extract().path("instant"));
+
+		assertEquals(Duration.between(instant, expectedInstant).plus(Duration.ofMillis(999)).getSeconds(), 0);
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void injectInstantPlusInvalid() {
+		String responseBody = "{\"instant\":\"$(!Instant.plus[a1])\"}";
+		String requestBody = "{}";
+
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL)
+				.then().statusCode(500);
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
 }
