@@ -11,6 +11,7 @@ Author: M.Scheepers
 ### Changes
 
 - implemented support for computed time stamp generation
+- moved to repository to github company account
 
 
 ## 2016-11-23 - Release of initial version
