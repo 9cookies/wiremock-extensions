@@ -4,7 +4,7 @@
 
 	<artifactId>json-body-transformer</artifactId>
 	<name>Wiremock JSON Body Transformer</name>
-	<version>0.0.3</version>
+	<version>0.0.4-SNAPSHOT</version>
 	<description>A Wiremock extension to transform JSON response bodies according to related requests.</description>
 
 	<parent>
