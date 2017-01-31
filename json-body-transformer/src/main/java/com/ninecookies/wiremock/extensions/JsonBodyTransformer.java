@@ -108,16 +108,21 @@ public class JsonBodyTransformer extends ResponseTransformer {
 			} else if ("$(!Timestamp)".equals(entry.getKey())) {
 				entry.setValue(Instant.now().toEpochMilli());
 			} else {
+				// check for $(!UUID) and $(!Random)
 				Matcher uuidRandomMatcher = uuidRandomPattern.matcher(entry.getKey());
-				Matcher instantPlusMatcher = instantPlusPattern.matcher(entry.getKey());
 				if (uuidRandomMatcher.matches()) {
+					// group 1 is the desired format (Random = random integer, UUID = random UUID)
 					String format = uuidRandomMatcher.group(1);
 					if ("UUID".equals(format)) {
 						entry.setValue(UUID.randomUUID().toString());
 					} else {
 						entry.setValue(random.nextInt(Integer.MAX_VALUE));
 					}
-				} else if (instantPlusMatcher.matches()) {
+					continue;
+				}
+				// check for time stamp computation
+				Matcher instantPlusMatcher = instantPlusPattern.matcher(entry.getKey());
+				if (instantPlusMatcher.matches()) {
 					// group 1 is the desired format (Instant = ISO 8601, Timestamp = Unix epoch millis)
 					// group 2 is the unit (H(our)|M(inute)|S(econd))
 					// group 3 is the amount (negative value is allowed)
@@ -132,15 +137,15 @@ public class JsonBodyTransformer extends ResponseTransformer {
 					} else {
 						entry.setValue(Instant.now().plus(duration).toEpochMilli());
 					}
-				} else {
-					// convert JSON replacement pattern to JsonPath expression
-					String path = entry.getKey().replaceFirst("\\$\\(", "\\$\\."); // change $( to // $.
-					path = path.substring(0, path.length() - 1); // remove trailing )
-					Object value = requestJsonPath.read(path);
-					LOG.debug("value for path '{}' is '{}' of type '{}'", path, value,
-							(value == null) ? null : value.getClass());
-					entry.setValue(value);
+					continue;
 				}
+				// convert JSON replacement pattern to JsonPath expression and read value from request
+				String path = entry.getKey().replaceFirst("\\$\\(", "\\$\\."); // change $( to // $.
+				path = path.substring(0, path.length() - 1); // remove trailing )
+				Object value = requestJsonPath.read(path);
+				LOG.debug("value for path '{}' is '{}' of type '{}'", path, value,
+						(value == null) ? null : value.getClass());
+				entry.setValue(value);
 			}
 		}
 		return map;
