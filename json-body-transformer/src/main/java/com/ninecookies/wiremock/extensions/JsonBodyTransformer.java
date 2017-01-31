@@ -31,7 +31,7 @@ public class JsonBodyTransformer extends ResponseTransformer {
 
 	private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
-	private final Random random = new Random(System.currentTimeMillis());
+	private final Random random = new Random();
 	private final Pattern uuidRandomPattern = Pattern.compile("\\$\\(!(UUID|Random).*\\)");
 	private final Pattern instantPlusPattern = Pattern
 			.compile("\\$\\(!(Instant|Timestamp)\\.plus\\[([HhMmSs]{1})([0-9\\-]+)\\]\\)");
