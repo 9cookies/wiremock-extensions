@@ -31,8 +31,10 @@ public class JsonBodyTransformer extends ResponseTransformer {
 
 	private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
+	private final Random random = new Random(System.currentTimeMillis());
+	private final Pattern uuidRandomPattern = Pattern.compile("\\$\\(!(UUID|Random).*\\)");
 	private final Pattern instantPlusPattern = Pattern
-			.compile("\\$\\(!Instant\\.plus\\[([HhMmSs]{1})([0-9\\-]+)\\]\\)");
+			.compile("\\$\\(!(Instant|Timestamp)\\.plus\\[([HhMmSs]{1})([0-9\\-]+)\\]\\)");
 
 	private final Pattern responsePattern = Pattern.compile("\\$\\(.*?\\)");
 
@@ -101,23 +103,35 @@ public class JsonBodyTransformer extends ResponseTransformer {
 				JsonPath.using(Configuration.builder().options(Option.DEFAULT_PATH_LEAF_TO_NULL)
 						.options(Option.SUPPRESS_EXCEPTIONS).build()).parse(requestBody);
 		for (Entry<String, Object> entry : map.entrySet()) {
-			if ("$(!Random)".equals(entry.getKey())) {
-				entry.setValue(new Random().nextInt(Integer.MAX_VALUE));
-			} else if ("$(!Instant)".equals(entry.getKey())) {
+			if ("$(!Instant)".equals(entry.getKey())) {
 				entry.setValue(Instant.now().toString());
-			} else if ("$(!UUID)".equals(entry.getKey())) {
-				entry.setValue(UUID.randomUUID().toString());
+			} else if ("$(!Timestamp)".equals(entry.getKey())) {
+				entry.setValue(Instant.now().toEpochMilli());
 			} else {
+				Matcher uuidRandomMatcher = uuidRandomPattern.matcher(entry.getKey());
 				Matcher instantPlusMatcher = instantPlusPattern.matcher(entry.getKey());
-				if (instantPlusMatcher.matches()) {
-					// group 1 is the unit (H(our)|M(inute)|S(econd))
-					// group 2 is the amount (negative value is allowed)
-					String unit = instantPlusMatcher.group(1);
-					String amount = instantPlusMatcher.group(2);
+				if (uuidRandomMatcher.matches()) {
+					String format = uuidRandomMatcher.group(1);
+					if ("UUID".equals(format)) {
+						entry.setValue(UUID.randomUUID().toString());
+					} else {
+						entry.setValue(random.nextInt(Integer.MAX_VALUE));
+					}
+				} else if (instantPlusMatcher.matches()) {
+					// group 1 is the desired format (Instant = ISO 8601, Timestamp = Unix epoch millis)
+					// group 2 is the unit (H(our)|M(inute)|S(econd))
+					// group 3 is the amount (negative value is allowed)
+					String format = instantPlusMatcher.group(1);
+					String unit = instantPlusMatcher.group(2);
+					String amount = instantPlusMatcher.group(3);
 					Duration duration = Duration.of(Long.parseLong(amount), stringToChronoUnit(unit));
-					LOG.debug("unit for '{}' is '{}' with amount '{}' yields to {}",
-							entry.getKey(), unit, amount, duration);
-					entry.setValue(Instant.now().plus(duration).toString());
+					LOG.debug("unit for '{}' is '{}' with amount '{}' and format '{}' yields to {}",
+							entry.getKey(), unit, amount, format, duration);
+					if ("Instant".equals(format)) {
+						entry.setValue(Instant.now().plus(duration).toString());
+					} else {
+						entry.setValue(Instant.now().plus(duration).toEpochMilli());
+					}
 				} else {
 					// convert JSON replacement pattern to JsonPath expression
 					String path = entry.getKey().replaceFirst("\\$\\(", "\\$\\."); // change $( to // $.
