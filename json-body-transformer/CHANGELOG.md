@@ -1,6 +1,6 @@
 # Change Log
 
-## 2016-11-xx
+## 2017-01-31 - Enhancement
 
 Important Notes: none
 
@@ -9,7 +9,8 @@ Version: 0.0.3
 Author: M.Scheepers
 
 ### Changes
-
+- implemented support for computed time stamp generation in Unix format (epoch milliseconds)
+- implemented support for multiple UUID and Random values
 
 
 ## 2016-11-25 - Enhancement
