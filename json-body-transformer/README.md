@@ -258,7 +258,7 @@ Add the following dependency to your projects `pom.xml` file.
 
 ### Standalone usage
 
-As WireMock supports running as a [standalone process](http://wiremock.org/docs/running-standalone/) there is also a [standalone version]https://raw.githubusercontent.com/mscookies/mvn-repo/master/releases/com/ninecookies/wiremock/extensions/json-body-transformer/0.0.1/json-body-transformer-0.0.1-jar-with-dependencies.jar) of the JsonBodyTransformer available that embeds its dependencies.
+As WireMock supports running as a [standalone process](http://wiremock.org/docs/running-standalone/) there is also a [standalone version](https://raw.githubusercontent.com/mscookies/mvn-repo/master/releases/com/ninecookies/wiremock/extensions/json-body-transformer/0.0.1/json-body-transformer-0.0.1-jar-with-dependencies.jar) of the JsonBodyTransformer available that embeds its dependencies.
 
 Start WireMock as standalone process with JsonBodyTransformer enabled as follows
 ```
