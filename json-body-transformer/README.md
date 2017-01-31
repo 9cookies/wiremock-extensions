@@ -130,30 +130,53 @@ Generating random UUID for a response property
 { "uuid": "$(!UUID)" }
 ```
 
-Generating current time stamp for a response property
+Note that multiple occurrences of `$(!Random)` or `$(!UUID)` will result in injecting the same value for all properties. If this is not the desired behavior it is possible to add a arbitrary suffix to the `Random` or `UUID` keyword to get different values for different properties injected.
+```JSON
+{
+  "id": "$(!RandomId)",
+  "otherId": "$(!RandomOther)",
+  "userId": "$(!UUID.User)",
+  "ownerId": "$(!UUID.Owner)"
+}
+```
+However, same suffixes result in same values for different properties. The following example shows the reuse of a specific random value for owner and creator id, but with a different id for modifier.
+```JSON
+{
+  "id": "$(!Random)",
+  "ownerId": "$(!UUID.Owner)",
+  "creatorId": "$(!UUID.Owner)",
+  "modifierId": "$(!UUID.Modifier)"
+}
+```
+
+Generating current time stamp in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) UTC format for a response property
 ```JSON
 { "created": "$(!Instant)" }
 ```
 
-Generating computed time stamp for a response property using the response pattern `$(!Instant.plus[UNITAMOUNT])`
-where `UNIT` indicates the time unit and `AMOUNT` the amount to add or subtract. Valid units are `s`, `m` and `h`
-for seconds, minutes and hours. Units are case insensitive. Amount might be positive or negative depending on whether
-the desired result should be in the past or in the future.
+Generating current time stamp in [Unix Epoch](https://en.wikipedia.org/wiki/Unix_time) UTC format for a response property
+```JSON
+{ "created": "$(!Timestamp)" }
+```
+
+Generating computed time stamp for a response property using the response pattern `$(!Instant.plus[UNITAMOUNT])` for [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) or `$(!Timestamp.plus[UNITAMOUNT])` for [Unix Epoch](https://en.wikipedia.org/wiki/Unix_time) format where `UNIT` indicates the time unit and `AMOUNT` the amount to add or subtract. Valid units are `s`, `m` and `h` for seconds, minutes and hours. Units are case insensitive. Amount might be positive or negative depending on whether the desired result should be in the past (negative) or in the future (positive).
 ```JSON
 {
     "one_second_in_future": "$(!Instant.plus[s1])",
     "one_second_in_past": "$(!Instant.plus[s-1])",
     "one_minute_in_future":  "$(!Instant.plus[m1])",
-    "one_minute_in_past":  "$(!Instant.plus[m-1])",
-    "one_hour_in_future":  "$(!Instant.plus[h1])",
-    "one_hour_in_past":  "$(!Instant.plus[h-1])"
+    "one_minute_in_past":  "$(!Timestamp.plus[m-1])",
+    "one_hour_in_future":  "$(!Timestamp.plus[h1])",
+    "one_hour_in_past":  "$(!Timestamp.plus[h-1])"
 }
 ```
-Note that all time stamps are returned as Strings in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) UTC format.
+
+Note that all time stamps are returned in UTC format.
+
 
 ### Maven usage
 
-This extension is not hosted on Maven central but on github. To use this artifact add the following respository definition either to your maven `settings.xml` or to the `pom.xml` file of your project that makes use of WireMock.
+This extension is not hosted on Maven central but on github. To use this artifact add the following repository definition either to your maven `settings.xml` or to the `pom.xml` file of your project that makes use of WireMock.
 
 ```XML
 <repository>
