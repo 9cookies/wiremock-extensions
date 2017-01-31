@@ -77,6 +77,20 @@ public class JsonBodyTransformerTest {
 	}
 
 	@Test
+	public void testTransformArray() {
+		String url = "/stub/array";
+		String requestBody = "{\"list\": [{\"item\":\"item-0\"},{\"item\":\"item-1\"}]}";
+		String responseBody = "{\"list\": \"$(list)\"}";
+
+		wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(url);
+		response.then().statusCode(200).body("list[0].item", equalTo("item-0"))
+				.body("list[1].item", equalTo("item-1"));
+	}
+
+	@Test
 	public void transformBodyStubbing() {
 		String url = "/stub/response";
 

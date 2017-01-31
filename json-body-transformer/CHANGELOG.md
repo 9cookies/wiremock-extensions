@@ -11,6 +11,7 @@ Author: M.Scheepers
 ### Changes
 - implemented support for computed time stamp generation in Unix format (epoch milliseconds)
 - implemented support for multiple UUID and Random values
+- verified support for JSON array handling
 
 
 ## 2016-11-25 - Enhancement
