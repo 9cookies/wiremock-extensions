@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isA;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 import java.time.Duration;
@@ -318,6 +319,66 @@ public class JsonBodyTransformerTest {
 				equalTo(null));
 
 		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void replaceVariableInStringAndAsProperty() throws Exception {
+		String requestBody = "{\"name\":\"John Doe\"}";
+		String responseBody = "{\"message\":\"Hello $(name), how are you?\", \"name\":\"$(name)\"}";
+
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
+				.body("message", equalTo("Hello John Doe, how are you?"))
+				.body("name", equalTo("John Doe"));
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void replaceVariableInString() throws Exception {
+		String requestBody = "{\"name\":\"John Doe\"}";
+		String responseBody = "{\"message\":\"Hello $(name), how are you?\"}";
+
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
+				.body("message", equalTo("Hello John Doe, how are you?"));
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void replaceUnknownVariableInString() throws Exception {
+		String requestBody = "{\"name\":\"John Doe\"}";
+		String responseBody = "{\"message\":\"Hello $(unknown), how are you?\"}";
+
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
+				.body("message", equalTo("Hello null, how are you?"));
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void replaceInjectionInString() {
+		String requestBody = "{\"name\":\"John Doe\"}";
+		String responseBody = "{\"message\":\"Hello $(name), you are the $(!Random) user.\"}";
+
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		String message = given().contentType(CONTENT_TYPE).body(requestBody)
+				.when().post(REQUEST_URL)
+				.then().statusCode(200).extract().path("message");
+		assertTrue(message.matches("Hello John Doe, you are the [0-9]* user\\."));
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+
 	}
 
 	@Test

@@ -74,9 +74,14 @@ public class JsonBodyTransformer extends ResponseTransformer {
 	private String transformJsonResponse(Map<String, Object> map, String responseBody) {
 		String result = responseBody;
 		for (Entry<String, Object> entry : map.entrySet()) {
-			String value = Json.write(entry.getValue());
+			// replace all occurrences of "$(property.path)" with according JSON value
 			String target = "\"" + entry.getKey() + "\"";
+			String value = Json.write(entry.getValue());
 			result = result.replace(target, value);
+			// check for in string replacements like "some arbitrary text $(property.path) with embedded property"
+			if (result.contains(entry.getKey())) {
+				result = result.replace(entry.getKey(), String.valueOf(entry.getValue()));
+			}
 		}
 		return result;
 	}
@@ -87,7 +92,7 @@ public class JsonBodyTransformer extends ResponseTransformer {
 		while (matcher.find()) {
 			String group = matcher.group();
 			if (result.containsKey(group)) {
-				LOG.warn("ignoring redundant response pattern '{}'", group);
+				LOG.debug("ignoring redundant response pattern '{}'", group);
 			} else {
 				result.put(group, null);
 			}

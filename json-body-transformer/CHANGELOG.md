@@ -1,5 +1,17 @@
 # Change Log
 
+## 2017-mm-dd - Enhancement
+
+Important Notes: none
+
+Version: 0.0.4
+
+Author: M.Scheepers
+
+### Changes
+- implemented support for embedded JSON path replacements
+
+
 ## 2017-01-31 - Enhancement
 
 Important Notes: none
