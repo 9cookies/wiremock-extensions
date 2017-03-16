@@ -3,10 +3,10 @@
 
 It is a [WireMock](http://wiremock.org/) extension that is able to parse a JSON request body using [JsonPath](https://github.com/jayway/JsonPath) and interpolates found results into the JSON response that is returned by WireMock. It is built on the [extension support](http://wiremock.org/docs/extending-wiremock/) provided by WireMock and allows your WireMock response to be dynamically depending on the JSON request body. It was inspired by the [wiremock-body-transformer](https://github.com/opentable/wiremock-body-transformer) but focus only on JSON contents to provide support for JsonPath patterns. Thus even complex JSON can be handled during response manipulation.
 
-### Request values referencing
+### Request value referencing
 
 The response body stub acts as a template where the match patterns are defined and which will be replaced by matching JsonPaths in the request body.
-The syntax of match patterns are slightly different as original [JsonPath patterns](http://goessner.net/articles/JsonPath/) used by WireMocks [request matching](http://wiremock.org/docs/request-matching/) as the dot '.' of a pattern is omitted but the path is encapsulated with braces.
+The syntax of match patterns is slightly different as original [JsonPath patterns](http://goessner.net/articles/JsonPath/) used by WireMocks [request matching](http://wiremock.org/docs/request-matching/) as the dot '.' of a pattern is omitted but the path is encapsulated with braces.
 
 Imagine following JSON request body
 ```JSON
@@ -18,19 +18,20 @@ Imagine following JSON request body
 ```
 To get the `age` property with JsonPath one would define `$.age` JsonPath to get the value `35`. But to reference the value of the `age` property in a JSON response body one has to define `$(age)` instead.
 
-The JSON of a response body referencing the value of `age` might look like
+The JSON of a response body referencing the values of `age` and `name` might look like
 
 ```JSON
 {
-    "found_age": "$(age)"
+    "found_age": "$(age)",
+    "composed_string": "$(name) is $(age) years old."
 }
 ``` 
 
 ### Data Type Handling
 
-As the request pattern is always a string value it has to be quoted even for numbers, booleans, a.s.o.. The `JsonBodyTransformer` will take care of the resulting data type and adds quotes if necessary and will omit them if required.
+As the request pattern is always a string value it has to be quoted even for numbers, booleans, a.s.o.. The `JsonBodyTransformer` will take care of the resulting data type and adds quotes if necessary and will omit them if required, but worth to mention that values used in composed strings will always be the raw values.
 
-If a pattern defined in a JSON response has no matiching coutnerpart in the JSON request the result will yield to `null`.
+If a pattern defined in a JSON response has no matching counterpart in the JSON request the result will yield to `null`.
 
 For the example above that will mean a response like
 ```JSON
@@ -53,7 +54,7 @@ rather than
     "found_name": "null"
 }
 ```
-which would be incorrect as `lastname` wasn't specified as `"null"` but was not found in the reqest.
+which would be incorrect as `lastname` wasn't specified as `"null"` but was not found in the request.
 
 ### Stubbing
 Instantiating the WireMock server with `JsonBodyTransformer` [extension](http://wiremock.org/docs/extending-wiremock/) instance
