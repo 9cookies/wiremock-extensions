@@ -204,7 +204,7 @@ Add the following dependency to your projects `pom.xml` file.
 <dependency>
 	<groupId>com.ninecookies.wiremock.extensions</groupId>
 	<artifactId>json-body-transformer</artifactId>
-	<version>0.0.1</version>
+	<version>0.0.4</version>
 </dependency>
 ```
 
@@ -234,14 +234,14 @@ Add the following dependency to your projects `pom.xml` file.
 
 ```XML
 <plugin>
-	<groupId>uk.co.automatictester</groupId>
+	<groupId>uk.co.deliverymind</groupId>
 	<artifactId>wiremock-maven-plugin</artifactId>
-	<version>2.0.0</version>
+	<version>2.2.0</version>
 	<dependencies>
 		<dependency>
 			<groupId>com.ninecookies.wiremock.extensions</groupId>
 			<artifactId>json-body-transformer</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>0.0.4</version>
 		</dependency>
 	</dependencies>
 	<executions>
@@ -263,5 +263,5 @@ As WireMock supports running as a [standalone process](http://wiremock.org/docs/
 
 Start WireMock as standalone process with JsonBodyTransformer enabled as follows
 ```
-$ java -cp wiremock-standalone-2.1.11.jar;json-body-transformer-0.0.1-jar-with-dependencies.jar com.github.tomakehurst.wiremock.standalone.WireMockServerRunner --verbose
+$ java -cp wiremock-standalone-2.5.1.jar;json-body-transformer-0.0.4-jar-with-dependencies.jar com.github.tomakehurst.wiremock.standalone.WireMockServerRunner --verbose
 ```

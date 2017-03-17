@@ -644,7 +644,7 @@ public class JsonBodyTransformerTest {
 		given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL)
 				.then().statusCode(500);
 
-		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+		wireMockServer.verify(0, postRequestedFor(urlEqualTo(REQUEST_URL)));
 	}
 
 	@Test
@@ -658,7 +658,7 @@ public class JsonBodyTransformerTest {
 		given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL)
 				.then().statusCode(500);
 
-		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+		wireMockServer.verify(0, postRequestedFor(urlEqualTo(REQUEST_URL)));
 	}
 
 }

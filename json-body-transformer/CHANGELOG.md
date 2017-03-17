@@ -9,7 +9,8 @@ Version: 0.0.4
 Author: M.Scheepers
 
 ### Changes
-- implemented support for embedded JSON path replacements
+- implemented support for string embedded JSON path replacements
+- updated to Wire Mock dependency to version 2.5.1
 
 
 ## 2017-01-31 - Enhancement
