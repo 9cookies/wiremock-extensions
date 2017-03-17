@@ -1,6 +1,6 @@
 # Change Log
 
-## 2017-mm-dd - Enhancement
+## 2017-03-17 - Enhancement
 
 Important Notes: none
 
