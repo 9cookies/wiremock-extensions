@@ -15,7 +15,7 @@
 	
 	<properties>
 		<jsonpath.version>2.2.0</jsonpath.version>
-		<wiremock.version>2.1.11</wiremock.version>
+		<wiremock.version>2.5.1</wiremock.version>
 
 		<hamcrest.version>1.3</hamcrest.version>
 		<restassured.version>2.4.1</restassured.version>

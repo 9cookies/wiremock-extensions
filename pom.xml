@@ -20,9 +20,6 @@
 		<project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
 
 		<java.version>1.8</java.version>
-
-		<!-- specify dryRun as uploading fails due to issues in site-maven-plugin -->
-		<github.site.dryRun>true</github.site.dryRun>
 		<github.global.server>github</github.global.server>
 		<!-- setup absolute path to parent folder of mvn-repo repository -->
 		<repo.folder>/Code/repositories</repo.folder>
@@ -49,14 +46,16 @@
 
 	<build>
 		<plugins>
-		<!-- this plug-in has issues with username / author / committer / whatever property/name is null might be
-		see https://github.com/github/maven-plugins/issues/85
-		None of the mentioned workarounds worked.. :/ so for now just execute a dryRun and 
-		manually commit and push mvn-repo -->
 			<plugin>
 	            <groupId>com.github.github</groupId>
 	            <artifactId>site-maven-plugin</artifactId>
 	            <version>0.12</version>
+				<!-- this plug-in has issues with username / author / committer / whatever property/name is null might be
+				see https://github.com/github/maven-plugins/issues/85
+				final solution was to configure user name on github account profile.
+				nevertheless we execute dryRun here, as the push to refs/heads/master will push to master of wiremock-extensions
+				repository instead of the specified mvn-repo (see repositoryName)
+				-->
 	            <configuration>
 	            	<repositoryName>mvn-repo</repositoryName>
 	            	<branch>refs/heads/master</branch>
@@ -71,6 +70,7 @@
 	                	<exclude>.gitignore</exclude>
 	                </excludes>
 	                <noJekyll>true</noJekyll>
+	                <dryRun>true</dryRun>
 	            </configuration>
 	            <executions>
 	              <execution>
