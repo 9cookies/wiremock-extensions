@@ -9,6 +9,8 @@ Version: 0.0.5
 Author: M.Scheepers
 
 ### Changes
+- implemented response transformation for requests without content (e.g. `GET`) and also with content other than `application/json`.
+	- Note: in either case replacement patterns will yield to `null` except for generated values.
 
 
 ## 2017-03-17 - Enhancement

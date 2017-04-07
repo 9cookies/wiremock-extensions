@@ -3,10 +3,13 @@ package com.ninecookies.wiremock.extensions;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +22,7 @@ import com.github.tomakehurst.wiremock.common.Json;
 import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.extension.ResponseTransformer;
 import com.github.tomakehurst.wiremock.http.Request;
+import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.http.Response;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.DocumentContext;
@@ -30,6 +34,8 @@ public class JsonBodyTransformer extends ResponseTransformer {
 	private static final Logger LOG = LoggerFactory.getLogger(JsonBodyTransformer.class);
 
 	private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
+	private static final Set<RequestMethod> METHODS_WITH_CONTENT = new HashSet<>(
+			Arrays.asList(RequestMethod.PUT, RequestMethod.POST, RequestMethod.PATCH));
 
 	private final Random random = new Random();
 	private final Pattern uuidRandomPattern = Pattern.compile("\\$\\(!(UUID|Random).*\\)");
@@ -42,20 +48,35 @@ public class JsonBodyTransformer extends ResponseTransformer {
 	public Response transform(Request request, Response response, FileSource files, Parameters parameters) {
 		// nothing to do for an empty body
 		if (response.getBody() == null || response.getBody().length == 0) {
-			LOG.debug("skipping transformation of empty response body.");
-			return response;
-		}
-		// nothing to do for content type other than application/json
-		if (!CONTENT_TYPE_APPLICATION_JSON.equals(request.contentTypeHeader().mimeTypePart())) {
-			LOG.warn("skipping transformation of unhandled content type '{}'",
-					request.contentTypeHeader().mimeTypePart());
+			LOG.debug("skip transformation of empty response");
 			return response;
 		}
 
-		// read all JSON path definitions from response and find counterparts in request
+		// nothing to do for response content type other than application/json
+		if (!response.getHeaders().getContentTypeHeader().isPresent()
+				|| !CONTENT_TYPE_APPLICATION_JSON.equals(response.getHeaders().getContentTypeHeader().mimeTypePart())) {
+			LOG.debug("skip transformation of unknown response (headers: '{}')",
+					response.getHeaders().toString().trim());
+			return response;
+		}
+
+		// get request body if applicable
+		String requestBody = null;
+		if (METHODS_WITH_CONTENT.contains(request.getMethod())) {
+			if (!request.contentTypeHeader().isPresent()
+					|| !CONTENT_TYPE_APPLICATION_JSON.equals(request.contentTypeHeader().mimeTypePart())) {
+				LOG.debug("skip request parsing due to content type '{}'", request.contentTypeHeader());
+			} else {
+				requestBody = request.getBodyAsString();
+			}
+		} else {
+			LOG.debug("skip request parsing due to method '{}'", request.getMethod());
+		}
+
+		// read all transformation patterns from response, populate values and transform the response
 		String responseBody = response.getBodyAsString();
 		Map<String, Object> responseJsonPaths = readResponsePatterns(responseBody);
-		mapRequestJsonPaths(responseJsonPaths, request.getBodyAsString());
+		mapRequestJsonPaths(responseJsonPaths, requestBody);
 		String transformedResponseBody = transformJsonResponse(responseJsonPaths, responseBody);
 
 		return Response.Builder.like(response).but().body(transformedResponseBody).build();
@@ -104,9 +125,11 @@ public class JsonBodyTransformer extends ResponseTransformer {
 		if (map.isEmpty()) {
 			return map;
 		}
-		DocumentContext requestJsonPath =
-				JsonPath.using(Configuration.builder().options(Option.DEFAULT_PATH_LEAF_TO_NULL)
-						.options(Option.SUPPRESS_EXCEPTIONS).build()).parse(requestBody);
+		DocumentContext requestJsonPath = null;
+		if (requestBody != null) {
+			requestJsonPath = JsonPath.using(Configuration.builder().options(Option.DEFAULT_PATH_LEAF_TO_NULL)
+					.options(Option.SUPPRESS_EXCEPTIONS).build()).parse(requestBody);
+		}
 		for (Entry<String, Object> entry : map.entrySet()) {
 			if ("$(!Instant)".equals(entry.getKey())) {
 				entry.setValue(Instant.now().toString());
@@ -145,12 +168,16 @@ public class JsonBodyTransformer extends ResponseTransformer {
 					continue;
 				}
 				// convert JSON replacement pattern to JsonPath expression and read value from request
-				String path = entry.getKey().replaceFirst("\\$\\(", "\\$\\."); // change $( to // $.
-				path = path.substring(0, path.length() - 1); // remove trailing )
-				Object value = requestJsonPath.read(path);
-				LOG.debug("value for path '{}' is '{}' of type '{}'", path, value,
-						(value == null) ? null : value.getClass());
-				entry.setValue(value);
+				if (requestJsonPath != null) {
+					String path = entry.getKey().replaceFirst("\\$\\(", "\\$\\."); // change $( to // $.
+					path = path.substring(0, path.length() - 1); // remove trailing )
+					Object value = requestJsonPath.read(path);
+					LOG.debug("value for path '{}' is '{}' of type '{}'", path, value,
+							(value == null) ? null : value.getClass());
+					entry.setValue(value);
+				} else {
+					LOG.warn("ignoring pattern {} due to missing request body", entry.getKey());
+				}
 			}
 		}
 		return map;

@@ -1,11 +1,14 @@
 package com.ninecookies.wiremock.extensions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static com.jayway.restassured.RestAssured.given;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isA;
 import static org.testng.Assert.assertEquals;
@@ -659,6 +662,63 @@ public class JsonBodyTransformerTest {
 				.then().statusCode(500);
 
 		wireMockServer.verify(0, postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void transformNonJsonContent() {
+		String responseBody = "<html><head><title>empty page</title><body>empty</body></html>";
+		String requestBody = "{}";
+		wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", "text/html").withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL)
+				.then().statusCode(200).extract().asString().equals(responseBody);
+
+		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void transformGetRequest() {
+		String responseBody = "{\"id\": \"$(!UUID.id)\", \"self\": \"$(!UUID.id)\", \"other\": \"$(!UUID)\","
+				+ " \"pattern\": \"$(unavailable)\"}";
+
+		wireMockServer.stubFor(get(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		Response response = given().when().get(REQUEST_URL);
+
+		ExtractableResponse<?> er = response.then().statusCode(200)
+				.body("id", isA(String.class))
+				.body("self", isA(String.class))
+				.body("other", isA(String.class))
+				.body("pattern", nullValue())
+				.extract();
+
+		String id = er.path("id");
+		String self = er.path("self");
+		String other = er.path("other");
+		assertEquals(id, self);
+		assertNotEquals(id, other);
+		try {
+			UUID.fromString(id);
+			UUID.fromString(self);
+			UUID.fromString(other);
+		} catch (IllegalArgumentException e) {
+			fail(e.getMessage());
+		}
+		wireMockServer.verify(getRequestedFor(urlEqualTo(REQUEST_URL)));
+	}
+
+	@Test
+	public void transformGetRequestMissingResponseContentType() {
+		String responseBody = "{\"id\": \"$(!UUID.id)\", \"self\": \"$(!UUID.id)\", \"other\": \"$(!UUID)\"}";
+
+		wireMockServer.stubFor(get(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+				.withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+		given().when().get(REQUEST_URL).then().statusCode(200).extract().asString().equals(responseBody);
+
+		wireMockServer.verify(getRequestedFor(urlEqualTo(REQUEST_URL)));
 	}
 
 }
