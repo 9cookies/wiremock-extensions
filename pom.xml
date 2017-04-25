@@ -30,13 +30,13 @@
 	
 	<distributionManagement>
 		<repository>
-			<id>ms-releases</id>
-			<name>GitHub Release Repository</name>
+			<id>local-releases</id>
+			<name>Local Release Repository</name>
 			<url>file://${project.build.directory}/mvn-repo/releases</url>
 		</repository>
 		<snapshotRepository>
-			<id>ms-snapshots</id>
-			<name>GitHub Snapshot Repository</name>
+			<id>local-snapshots</id>
+			<name>Local Snapshot Repository</name>
 			<url>file://${project.build.directory}/mvn-repo/snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
@@ -59,7 +59,6 @@
 	            	<outputDirectory>${project.build.directory}/mvn-repo</outputDirectory>
 	            	<merge>true</merge>
 	                <message>Maven artifacts for ${project.artifactId}.${project.version}</message>
-	                <noJekyll>true</noJekyll>
 	                <includes>
 	                	<include>**/*</include>
 	                </includes>
