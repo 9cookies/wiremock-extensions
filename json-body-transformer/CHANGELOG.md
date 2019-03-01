@@ -1,5 +1,17 @@
 # Change Log
 
+## 2019-mm-dd - Enhancement
+
+Important Notes: none
+
+Version: 0.0.6
+
+Author: M.Scheepers
+
+### Changes
+- none
+
+
 ## 2019-03-01 - Enhancement
 
 Important Notes: none

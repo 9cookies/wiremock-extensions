@@ -4,13 +4,13 @@
 
 	<artifactId>json-body-transformer</artifactId>
 	<name>Wiremock JSON Body Transformer</name>
-	<version>0.0.5</version>
+	<version>0.0.6-SNAPSHOT</version>
 	<description>A Wiremock extension to transform JSON response bodies according to related requests.</description>
 
 	<parent>
 		<groupId>com.ninecookies.wiremock.extensions</groupId>
 		<artifactId>wiremock-extensions</artifactId>
-		<version>0.0.1</version>
+		<version>0.0.2-SNAPSHOT</version>
 	</parent>
 	
 	<properties>
