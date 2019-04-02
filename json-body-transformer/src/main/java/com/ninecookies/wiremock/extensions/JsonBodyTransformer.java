@@ -26,7 +26,7 @@ public class JsonBodyTransformer extends ResponseTransformer {
     @Override
     public Response transform(Request request, Response response, FileSource files, Parameters parameters) {
         if (!requiresTransformation(response)) {
-            LOG.info("transform('{}', '{}')", request, response);
+            LOG.info("transform('{}', '{}')", request, Objects.describe(response));
             return response;
         }
 
@@ -37,7 +37,7 @@ public class JsonBodyTransformer extends ResponseTransformer {
         Placeholders.parsePlaceholderValues(responsePlaceholders, requestBody);
         String transformedResponseBody = Placeholders.replaceValuesInJson(responsePlaceholders, responseBody);
         Response result = Response.Builder.like(response).but().body(transformedResponseBody).build();
-        LOG.info("transform('{}', '{}') -> '{}'", request, response, result);
+        LOG.info("transform('{}') -> '{}'", request, Objects.describe(result));
         return result;
     }
 
@@ -72,12 +72,12 @@ public class JsonBodyTransformer extends ResponseTransformer {
         if (METHODS_WITH_CONTENT.contains(request.getMethod())) {
             if (!request.contentTypeHeader().isPresent()
                     || !CONTENT_TYPE_APPLICATION_JSON.equals(request.contentTypeHeader().mimeTypePart())) {
-                LOG.info("skip request parsing due to content type '{}'", request.contentTypeHeader());
+                LOG.debug("skip request parsing due to content type '{}'", request.contentTypeHeader());
             } else {
                 result = request.getBodyAsString();
             }
         } else {
-            LOG.info("skip request parsing due to method '{}'", request.getMethod());
+            LOG.debug("skip request parsing due to method '{}'", request.getMethod());
         }
         return result;
     }

@@ -2,9 +2,17 @@ package com.ninecookies.wiremock.extensions;
 
 import java.util.regex.Matcher;
 
+import com.github.tomakehurst.wiremock.http.Response;
 import com.jayway.jsonpath.DocumentContext;
 
 public class Objects {
+
+    public static String describe(Response response) {
+        if (response == null) {
+            return null;
+        }
+        return "[Response] " + response.getStatus() + " -> " + response.getBodyAsString();
+    }
 
     public static String describe(Object object) {
         if (object == null) {

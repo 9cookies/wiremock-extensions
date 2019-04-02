@@ -1,0 +1,36 @@
+{
+	"uuid": "1a773789-8dd4-4251-8ec8-def69563045f",
+	"request": {
+		"url": "/request/with/callback",
+		"method": "POST"
+	},
+	"response": {
+		"status": 201,
+		"body": "{\"id\":\"$(!UUID)\"}",
+		"headers": {
+			"content-type": "application/json"
+		},
+		"transformers": [
+			"json-body-transformer"
+		]
+	},
+	"postServeActions": {
+		"callback-simulator": {
+			"callbacks": [
+				{
+					"delay": 100,
+					"url": "http://localhost:9090/callbacks",
+					"data": {
+						"id": "$(response.id)",
+						"value": "defined-in-mapping-file",
+						"timestamp": "2019-03-04T17:05:43.596Z",
+						"driver": {
+							"id": "driver-id",
+							"name": "driver-name"
+						}
+					}
+				}
+			]
+		}
+	}
+}

@@ -47,6 +47,16 @@ public class Placeholders {
             .options(Option.SUPPRESS_EXCEPTIONS).build());
 
     /**
+     * Indicates whether the specified {@code string} is a placeholder.
+     *
+     * @param string the {@link String} to check.
+     * @return {@code true} if the specified {@code string} is a placeholder; otherwise {@code false}.
+     */
+    public static boolean isPlaceholder(String string) {
+        return PLACEHOLDER_PATTERN.asPredicate().test(string);
+    }
+
+    /**
      * Creates a {@link DocumentContext} for the specified {@code json} string.
      *
      * @param json the JSON {@link String} to create the {@link DocumentContext} for.
