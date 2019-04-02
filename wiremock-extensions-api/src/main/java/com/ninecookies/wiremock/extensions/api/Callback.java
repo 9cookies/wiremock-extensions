@@ -2,7 +2,7 @@ package com.ninecookies.wiremock.extensions.api;
 
 /**
  * Represents a single callback definition for the callback simulator post serve action to conveniently compose callback
- * definitions for Wiremock stubbing.
+ * definitions programmatically for Wiremock stubbing.
  *
  * @author M.Scheepers
  * @since 0.0.1

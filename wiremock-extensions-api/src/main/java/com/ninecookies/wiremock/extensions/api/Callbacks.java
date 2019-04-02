@@ -6,7 +6,7 @@ import java.util.Set;
 
 /**
  * Represents one or more callback definitions for the callback simulator post serve action to conveniently compose
- * callbacks for Wiremock stubbing.
+ * callback definitions programmatically for Wiremock stubbing.
  *
  * @author M.Scheepers
  * @since 0.0.1
