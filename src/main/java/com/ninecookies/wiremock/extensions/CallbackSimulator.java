@@ -27,6 +27,8 @@ import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.jayway.jsonpath.DocumentContext;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.api.Callbacks;
+import com.ninecookies.wiremock.extensions.util.Objects;
+import com.ninecookies.wiremock.extensions.util.Placeholders;
 
 public class CallbackSimulator extends PostServeAction {
 

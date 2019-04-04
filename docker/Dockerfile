@@ -13,7 +13,7 @@ RUN mkdir -p /var/wiremock/lib/ \
   && wget https://repo1.maven.org/maven2/org/slf4j/slf4j-simple/1.7.26/slf4j-simple-1.7.26.jar \
     -O /var/wiremock/lib/slf4j-simple-1.7.26.jar
 
-COPY json-body-transformer-$EXTENSION_VERSION-jar-with-dependencies.jar /var/wiremock/lib/json-body-transformer.jar
+COPY wiremock-extensions-$EXTENSION_VERSION-jar-with-dependencies.jar /var/wiremock/lib/wiremock-extensions.jar
 COPY docker-entrypoint.sh /
 
 # set working directory to external mount point

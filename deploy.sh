@@ -1,15 +1,18 @@
 #!/bin/bash
 
+# exist script if something goes wrong
+set -e
+
 # uncomment next line to debug the script
 #set -x
 
 # build and deploy maven project
 mvn clean deploy
 # wiremock and extension versions for docker
-wiremockVersion=$(mvn -f json-body-transformer/pom.xml -q help:evaluate -Dexpression=wiremock.version -DforceStdout)
-extensionVersion=$(mvn -f json-body-transformer/pom.xml -q help:evaluate -Dexpression=project.version -DforceStdout)
+wiremockVersion=$(mvn -f pom.xml -q help:evaluate -Dexpression=wiremock.version -DforceStdout)
+extensionVersion=$(mvn -f pom.xml -q help:evaluate -Dexpression=project.version -DforceStdout)
 # extensions jar for docker
-cp json-body-transformer/target/json-body-transformer-$extensionVersion-jar-with-dependencies.jar docker/
+cp target/wiremock-extensions-$extensionVersion-jar-with-dependencies.jar docker/
 # init docker variables
 image=rps-wiremock
 tag=$wiremockVersion-$extensionVersion

@@ -14,6 +14,7 @@ import com.github.tomakehurst.wiremock.extension.ResponseTransformer;
 import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.http.Response;
+import com.ninecookies.wiremock.extensions.util.Placeholders;
 
 public class JsonBodyTransformer extends ResponseTransformer {
 

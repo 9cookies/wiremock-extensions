@@ -1,6 +1,6 @@
-package com.ninecookies.wiremock.extensions;
+package com.ninecookies.wiremock.extensions.util;
 
-import static com.ninecookies.wiremock.extensions.Objects.describe;
+import static com.ninecookies.wiremock.extensions.util.Objects.describe;
 
 import java.time.Duration;
 import java.time.Instant;

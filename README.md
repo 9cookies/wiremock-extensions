@@ -7,6 +7,7 @@ The project is based on Java 8, uses Maven as build tool and provides extensions
 ## Prerequisites
 - JDK 8
 - Maven 3.1.x+
+- Docker 1.6+
 
 ## Build
 - Clone the `wiremock-extensions` project from git
@@ -14,4 +15,4 @@ The project is based on Java 8, uses Maven as build tool and provides extensions
 - Wait for the build and tests to finish.
 
 ## Documentation
-You can find further information under the [Json Body Transformer Project](https://github.com/mscookies/wiremock-extensions/tree/master/json-body-transformer).
+You can find further information under the [JSON Body Transformer](json-body-transformer.md).

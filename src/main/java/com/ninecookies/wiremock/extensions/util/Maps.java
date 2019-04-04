@@ -1,4 +1,4 @@
-package com.ninecookies.wiremock.extensions;
+package com.ninecookies.wiremock.extensions.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
