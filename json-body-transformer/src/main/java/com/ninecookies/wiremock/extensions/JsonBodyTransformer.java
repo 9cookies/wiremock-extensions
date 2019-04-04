@@ -25,19 +25,16 @@ public class JsonBodyTransformer extends ResponseTransformer {
 
     @Override
     public Response transform(Request request, Response response, FileSource files, Parameters parameters) {
+        LOG.info("transform('{}', '{}')", request.getMethod(), request.getAbsoluteUrl());
         if (!requiresTransformation(response)) {
-            LOG.info("transform('{}', '{}')", request, Objects.describe(response));
             return response;
         }
-
         String responseBody = response.getBodyAsString();
         String requestBody = extractJsonBody(request);
-
         Map<String, Object> responsePlaceholders = Placeholders.parseJsonBody(responseBody);
         Placeholders.parsePlaceholderValues(responsePlaceholders, requestBody);
         String transformedResponseBody = Placeholders.replaceValuesInJson(responsePlaceholders, responseBody);
         Response result = Response.Builder.like(response).but().body(transformedResponseBody).build();
-        LOG.info("transform('{}') -> '{}'", request, Objects.describe(result));
         return result;
     }
 
@@ -54,13 +51,13 @@ public class JsonBodyTransformer extends ResponseTransformer {
     private boolean requiresTransformation(Response response) {
         // nothing to do for an empty body
         if (response.getBody() == null || response.getBody().length == 0) {
-            LOG.info("skip transformation of empty response");
+            LOG.debug("skip transformation of empty response");
             return false;
         }
         // nothing to do for response content type other than application/json
         if (!response.getHeaders().getContentTypeHeader().isPresent()
                 || !CONTENT_TYPE_APPLICATION_JSON.equals(response.getHeaders().getContentTypeHeader().mimeTypePart())) {
-            LOG.info("skip transformation of unknown response (headers: '{}')",
+            LOG.debug("skip transformation of unknown response (headers: '{}')",
                     response.getHeaders().toString().trim());
             return false;
         }

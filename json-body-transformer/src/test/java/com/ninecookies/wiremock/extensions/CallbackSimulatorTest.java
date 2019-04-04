@@ -270,6 +270,35 @@ public class CallbackSimulatorTest {
         wireMockServer.verify(0, postRequestedFor(urlEqualTo("/arbitrary/url")));
     }
 
+    @Test
+    public void testCallbackWithProcessingFailure() {
+
+        String callbackUrl = "http://non.existing.host/callbacks";
+
+        Map<String, Object> data = mapOf(entry("id", "$(response.id)"),
+                entry("event", "callback-defined-event"),
+                entry("name", "$(response.name)"),
+                entry("timestamp", "$(!Timestamp)"));
+
+        Map<String, Object> callback = mapOf(entry("delay", 100), entry("url", callbackUrl), entry("data", data));
+        Map<String, Object> callbacks = mapOf(entry("callbacks", Arrays.asList(callback)));
+
+        String getUrl = "/get/with/erroneous/callback";
+        String responseData = "{\"id\":\"$(!UUID)\", \"name\":\"response-name\"}";
+        wireMockServer.stubFor(get(getUrl)
+                .withPostServeAction("callback-simulator", callbacks)
+                .willReturn(aResponse().withStatus(200)
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseData)
+                        .withTransformers("json-body-transformer")));
+
+        given().accept("application/json")
+                .get(getUrl).then().statusCode(200).extract().asString();
+
+        sleep();
+        wireMockServer.verify(0, postRequestedFor(urlEqualTo("/arbitrary/url")));
+    }
+
     private void sleep() {
         try {
             Thread.sleep(SLEEP); // 60_000 * 10);

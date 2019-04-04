@@ -1,5 +1,6 @@
 package com.ninecookies.wiremock.extensions;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Timer;
@@ -7,12 +8,14 @@ import java.util.TimerTask;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.ParseException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,10 +49,32 @@ public class CallbackSimulator extends PostServeAction {
             try (CloseableHttpClient client = HttpClientBuilder
                     .create().build()) {
                 HttpResponse response = client.execute(post);
-                LOG.info("post response: {}", response);
+                int status = response.getStatusLine().getStatusCode();
+                if (status >= 200 && status < 300) {
+                    // in case of success, just print the status line
+                    LOG.info("post to '{}' succeeded: response: {}", uri, response.getStatusLine());
+                } else {
+                    // in error case also print response body if available
+                    LOG.warn("post to '{}' failed: response: {}\n{}",
+                            uri, response.getStatusLine(), readEntity(response.getEntity()));
+                }
             } catch (Exception e) {
-                LOG.error("POST request to '{}' with '{}' failed", uri, content, e);
+                // in failure case print request body and exception
+                LOG.error("post to '{}' errored\ncontent\n{}\n{}",
+                        uri, content, readEntity(content), e);
             }
+        }
+
+        private String readEntity(HttpEntity entity) {
+            String result = null;
+            if (entity != null) {
+                try {
+                    result = EntityUtils.toString(entity);
+                } catch (ParseException | IOException e) {
+                    /* ignored */
+                }
+            }
+            return result;
         }
 
         public static PostTask of(String uri, Object content) {
