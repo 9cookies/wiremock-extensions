@@ -9,7 +9,7 @@ Version: 0.0.6
 Author: M.Scheepers
 
 ### Changes
-- none
+- introduced a callback simulator post serve action that will perform configurable requests to arbitrary services
 
 
 ## 2019-03-01 - Enhancement

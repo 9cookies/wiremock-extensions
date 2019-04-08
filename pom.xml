@@ -12,6 +12,7 @@
 
 	<modules>
 		<module>json-body-transformer</module>
+		<module>wiremock-extensions-api</module>
 	</modules>
 
 	<properties>

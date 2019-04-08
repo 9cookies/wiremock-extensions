@@ -1,0 +1,40 @@
+{
+	"uuid": "dca4ca9f-5402-42cc-b424-c0a48bc87351",
+	"request": {
+		"url": "/request/with/file/and/callback",
+		"method": "POST"
+	},
+	"response": {
+		"status": 201,
+		"headers": {
+			"content-type": "application/json"
+		},
+		"jsonBody": {
+			"id": "$(!UUID.id)",
+			"name": "$(name)",
+			"datetime": "$(!Instant.plus[m10])"
+		},
+		"transformers": [
+			"json-body-transformer"
+		]
+	},
+	"postServeActions": {
+		"callback-simulator": {
+			"callbacks": [
+				{
+					"delay": 100,
+					"url": "$(request.url)",
+					"data": {
+						"id": "$(response.id)",
+						"datetime": "$(response.datetime)",
+						"random": "$(!Random)",
+						"timestamp": "$(!Timestamp)",
+						"nested": {
+							"instant": "$(!Instant.plus[m10])"
+						}
+					}
+				}
+			]
+		}
+	}
+}

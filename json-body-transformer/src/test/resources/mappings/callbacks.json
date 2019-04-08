@@ -1,0 +1,10 @@
+{
+	"uuid": "c333c17d-cd5f-4509-9391-d2f64aff4380",
+	"request": {
+		"url": "/callbacks",
+		"method": "POST"
+	},
+	"response": {
+		"status": 204
+	}
+}

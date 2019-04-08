@@ -378,7 +378,7 @@ public class JsonBodyTransformerTest {
 		String message = given().contentType(CONTENT_TYPE).body(requestBody)
 				.when().post(REQUEST_URL)
 				.then().statusCode(200).extract().path("message");
-		assertTrue(message.matches("Hello John Doe, you are the [0-9]* user\\."));
+		assertTrue(message.matches("Hello John Doe, you are the [\\-0-9]* user\\."));
 
 		wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
 
