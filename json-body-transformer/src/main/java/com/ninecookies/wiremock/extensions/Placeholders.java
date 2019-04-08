@@ -102,14 +102,29 @@ public class Placeholders {
         if (placeholders == null || placeholders.isEmpty() || !placeholders.containsValue(null)) {
             return;
         }
-        DocumentContext documentContext = documentContextOf(json);
+        parsePlaceholderValues(placeholders, documentContextOf(json));
+    }
+
+    /**
+     * Traverses the specified {@code placeholders} and parses the specified {@code documentContext} for each
+     * placeholder who's value is {@code null}.
+     *
+     * @param placeholders the {@link Map} of placeholders to parse values for.
+     * @param documentContext the JSON {@link DocumentContext} to look for values.
+     */
+    public static void parsePlaceholderValues(Map<String, Object> placeholders, DocumentContext documentContext) {
+        // if placeholders is null or empty or all values are set we are already done
+        if (placeholders == null || placeholders.isEmpty() || !placeholders.containsValue(null)) {
+            return;
+        }
+
         for (Entry<String, Object> placeholder : placeholders.entrySet()) {
             // just look for placeholders who don't have a value yet
             if (placeholder.getValue() == null) {
                 placeholder.setValue(populatePlaceholder(placeholder.getKey(), documentContext));
             }
         }
-        LOG.debug("parsePlaceholderValues('{}', {})", placeholders, json);
+        LOG.debug("parsePlaceholderValues('{}', {})", placeholders, describe(documentContext));
     }
 
     public static String replaceValuesInJson(Map<String, Object> placeholders, String json) {

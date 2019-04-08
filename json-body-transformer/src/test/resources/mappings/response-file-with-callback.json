@@ -28,7 +28,10 @@
 						"id": "$(response.id)",
 						"datetime": "$(response.datetime)",
 						"random": "$(!Random)",
-						"timestamp": "$(!Timestamp)"
+						"timestamp": "$(!Timestamp)",
+						"nested": {
+							"instant": "$(!Instant.plus[m10])"
+						}
 					}
 				}
 			]
