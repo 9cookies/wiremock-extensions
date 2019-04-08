@@ -199,7 +199,9 @@ public class CallbackSimulatorTest {
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.datetime == '" + datetime + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.random)]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.timestamp)]")));
+                .withRequestBody(matchingJsonPath("$.[?(@.timestamp)]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.nested.instant)]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.nested.instant != '$(!Instant.plus[m10])')]")));
 
     }
 

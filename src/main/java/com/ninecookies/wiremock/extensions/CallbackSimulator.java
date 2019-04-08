@@ -2,7 +2,6 @@ package com.ninecookies.wiremock.extensions;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -11,8 +10,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
@@ -79,10 +78,10 @@ public class CallbackSimulator extends PostServeAction {
             return result;
         }
 
-        public static PostTask of(String uri, Object content) {
+        public static PostTask of(String uri, String jsonContent) {
             PostTask result = new PostTask();
             result.uri = uri;
-            result.content = new ByteArrayEntity(Json.toByteArray(content), ContentType.APPLICATION_JSON);
+            result.content = new StringEntity(jsonContent, ContentType.APPLICATION_JSON);
             return result;
         }
     }
@@ -110,29 +109,16 @@ public class CallbackSimulator extends PostServeAction {
 
         for (Callback callback : callbacks.callbacks) {
             LOG.debug("callback.data: {}", Objects.describe(callback.data));
-            // should always be, but...
-            if (!Map.class.isAssignableFrom(callback.data.getClass())) {
-                LOG.error("callback.data is not of type Map: '{}'",
-                        callback.data == null ? null : callback.data.getClass());
-                continue;
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<Object, Object> data = (Map<Object, Object>) callback.data;
-            for (Entry<Object, Object> entry : data.entrySet()) {
-                LOG.debug("entry: {} -> {}", Objects.describe(entry.getKey()), Objects.describe(entry.getValue()));
-                if (entry.getValue() instanceof String) {
-                    String value = (String) entry.getValue();
-                    if (Placeholders.isPlaceholder(value)) {
-                        entry.setValue(Placeholders.populatePlaceholder(value, servedJson));
-                    }
-                }
-            }
+            String dataJson = Json.write(callback.data);
+            Map<String, Object> placeholders = Placeholders.parseJsonBody(dataJson);
+            Placeholders.parsePlaceholderValues(placeholders, servedJson);
+            dataJson = Placeholders.replaceValuesInJson(placeholders, dataJson);
+            LOG.debug("final data: {}", dataJson);
             Object url = Placeholders.isPlaceholder(callback.url)
                     ? Placeholders.populatePlaceholder(callback.url, servedJson)
                     : callback.url;
-            LOG.info("scheduling callback task to: '{}' with delay '{}' and data '{}'", url, callback.delay, data);
-            timer.schedule(PostTask.of(url.toString(), data), callback.delay);
+            LOG.info("scheduling callback task to: '{}' with delay '{}' and data '{}'", url, callback.delay, dataJson);
+            timer.schedule(PostTask.of(url.toString(), dataJson), callback.delay);
         }
     }
 }
