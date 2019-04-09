@@ -1,7 +1,6 @@
 package com.ninecookies.wiremock.extensions;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -109,10 +108,7 @@ public class CallbackSimulator extends PostServeAction {
 
         for (Callback callback : callbacks.callbacks) {
             LOG.debug("callback.data: {}", Objects.describe(callback.data));
-            String dataJson = Json.write(callback.data);
-            Map<String, Object> placeholders = Placeholders.parseJsonBody(dataJson);
-            Placeholders.parsePlaceholderValues(placeholders, servedJson);
-            dataJson = Placeholders.replaceValuesInJson(placeholders, dataJson);
+            String dataJson = Placeholders.transformJson(servedJson, Json.write(callback.data));
             LOG.debug("final data: {}", dataJson);
             Object url = Placeholders.isPlaceholder(callback.url)
                     ? Placeholders.populatePlaceholder(callback.url, servedJson)

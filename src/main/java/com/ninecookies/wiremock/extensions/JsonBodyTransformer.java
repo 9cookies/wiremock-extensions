@@ -2,7 +2,6 @@ package com.ninecookies.wiremock.extensions;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -32,9 +31,7 @@ public class JsonBodyTransformer extends ResponseTransformer {
         }
         String responseBody = response.getBodyAsString();
         String requestBody = extractJsonBody(request);
-        Map<String, Object> responsePlaceholders = Placeholders.parseJsonBody(responseBody);
-        Placeholders.parsePlaceholderValues(responsePlaceholders, requestBody);
-        String transformedResponseBody = Placeholders.replaceValuesInJson(responsePlaceholders, responseBody);
+        String transformedResponseBody = Placeholders.transformJson(requestBody, responseBody);
         Response result = Response.Builder.like(response).but().body(transformedResponseBody).build();
         return result;
     }

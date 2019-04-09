@@ -14,8 +14,11 @@ The project is based on Java 8, uses Maven as build tool and provides extensions
 - Perform a `mvn clean install`
 - Wait for the build and tests to finish.
 
-## Value referencing
 
+## Featured Keywords
+You can find further information in the [documentation](keywords.md).
+
+## Value referencing
 The response body stub as well as the callback body stub act as a template where match pattern may be defined and which will be replaced by matching JsonPaths.
 
 ## The JSON Body Transformer
@@ -25,9 +28,6 @@ You can find further information in the [documentation](json-body-transformer.md
 ## The Callback Simulator
 It implements WireMock's `PostServeAction` and is an extension that is able to emit POST requests to arbitrary URLs. It allows you WireMock callback to be dynamically depending on the JSON request and response bodies of the related request.
 You can find further information in the [documentation](callback-simulator.md).
-
-## Featured Keywords
-You can find further information in the [documentation](keywords.md).
 
 ### Maven usage
 

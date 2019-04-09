@@ -46,6 +46,16 @@ public class Placeholders {
             .options(Option.DEFAULT_PATH_LEAF_TO_NULL)
             .options(Option.SUPPRESS_EXCEPTIONS).build());
 
+    public static String transformJson(String placeholderSource, String jsonToTransform) {
+        return transformJson(documentContextOf(placeholderSource), jsonToTransform);
+    }
+
+    public static String transformJson(DocumentContext placeholderSource, String jsonToTransform) {
+        Map<String, Object> responsePlaceholders = Placeholders.parseJsonBody(jsonToTransform);
+        Placeholders.parsePlaceholderValues(responsePlaceholders, placeholderSource);
+        return Placeholders.replaceValuesInJson(responsePlaceholders, jsonToTransform);
+    }
+
     /**
      * Indicates whether the specified {@code string} is a placeholder.
      *
@@ -192,9 +202,9 @@ public class Placeholders {
         private static final Function<String, Instant> INSTANT_PROVIDER = s -> {
             Instant result = Instant.now();
             Matcher arguments = IS_CALCULATED.matcher(s);
-            if (arguments.matches()) {
-                return result
-                        .plus(Duration.of(Long.parseLong(arguments.group(2)), stringToChronoUnit(arguments.group(1))));
+            if (arguments.find()) {
+                return result.plus(Duration.of(Long.parseLong(arguments.group(2)),
+                        stringToChronoUnit(arguments.group(1))));
             }
             if (s.startsWith(".plus[")) {
                 // unmatched calculation pattern

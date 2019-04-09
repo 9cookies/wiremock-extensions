@@ -165,13 +165,13 @@ public class CallbackSimulatorTest {
                 .extract().asString();
 
         String id = Json.node(responseJson).get("id").textValue();
-        Thread.sleep(200);
+        Thread.sleep(250);
         wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData1.value + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData1.timestamp + "')]")));
 
-        Thread.sleep(400);
+        Thread.sleep(450);
         wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData2.value + "')]"))
