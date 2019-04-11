@@ -4,8 +4,8 @@
 set -x
 
 # expose the docker host's ip address in /etc/hosts as host.docker.internal
-# to work around https://github.com/docker/for-linux/issues/264 
-nslookup host.docker.internal >> /dev/null
+# to work around https://github.com/docker/for-linux/issues/264
+host host.docker.internal | grep "host.docker.internal has address" >> /dev/null
 if [ $? -ne 0 ]; then
 	echo "$(ip -4 route show default | cut -d' ' -f3)    host.docker.internal" >> /etc/hosts
 fi
