@@ -1,5 +1,7 @@
 package com.ninecookies.wiremock.extensions.api;
 
+import com.ninecookies.wiremock.extensions.util.Strings;
+
 /**
  * Represents a single callback definition for the callback simulator post serve action to conveniently compose callback
  * definitions programmatically for Wiremock stubbing.
@@ -20,6 +22,11 @@ public class Callback {
     public String url;
 
     /**
+     * The authentication to use for the callback.
+     */
+    public Authentication authentication;
+
+    /**
      * The object representing arbitrary callback data.
      */
     public Object data;
@@ -33,10 +40,17 @@ public class Callback {
      * @return a new {@link Callback} instance ready to use.
      */
     public static Callback of(int delay, String url, Object data) {
+        return of(delay, url, null, null, data);
+    }
+
+    public static Callback of(int delay, String url, String username, String password, Object data) {
         Callback result = new Callback();
         result.delay = delay;
         result.url = url;
         result.data = data;
+        if (!Strings.isNullOrEmpty(username) && !Strings.isNullOrEmpty(password)) {
+            result.authentication = Authentication.of(username, password);
+        }
         return result;
     }
 }

@@ -23,6 +23,7 @@ import org.testng.annotations.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.BasicCredentials;
 import com.github.tomakehurst.wiremock.common.Json;
 import com.jayway.restassured.RestAssured;
 import com.ninecookies.wiremock.extensions.api.Callback;
@@ -91,10 +92,12 @@ public class CallbackSimulatorTest {
         String id = Json.node(responseJson).get("id").textValue();
         sleep();
         wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks"))
+                .withBasicAuth(new BasicCredentials("user", "pass"))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == 'defined-in-mapping-file')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '2019-03-04T17:05:43.596Z')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.driver.id == 'driver-id')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.path_part == 'with')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.driver.name == 'driver-name')]")));
     }
 
@@ -132,6 +135,31 @@ public class CallbackSimulatorTest {
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData.timestamp + "')]")));
+    }
+
+    @Test
+    public void testCallbackWithPartialUrlReplacement() throws InterruptedException {
+        String postUrl = "/request/partial";
+        String callbackUrl = "http://localhost:$(response.port)/callbacks";
+
+        String postData = "{\"name\":\"test\"}";
+        String responseData = "{\"id\":\"$(!UUID)\",\"name\":\"$(name)\",\"port\":" + SERVER_PORT + "}";
+
+        wireMockServer.stubFor(post(urlEqualTo(postUrl))
+                .withPostServeAction("callback-simulator",
+                        Callbacks.of(DELAY, callbackUrl, CallbackData.of("arbitrary-data")))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseData)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(200)));
+
+        given().body(postData).contentType("application/json")
+                .when().post(postUrl)
+                .then().statusCode(200);
+
+        sleep();
+        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks")));
     }
 
     @Test
@@ -240,6 +268,46 @@ public class CallbackSimulatorTest {
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.event == 'callback-defined-event')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.name == '" + name + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.timestamp)]")));
+    }
+
+    @Test
+    public void testCallbackWithGetMethodPathPart() {
+
+        String callbackPath = "/get/callbacks";
+        String callbackUrl = "http://localhost:" + SERVER_PORT + callbackPath;
+        wireMockServer.stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", "$(response.id)");
+        data.put("event", "callback-defined-event");
+        data.put("name", "$(response.name)");
+        data.put("timestamp", "$(!Timestamp)");
+        data.put("part", "$(urlParts[3])");
+        Callbacks callbacks = Callbacks.of(100, callbackUrl, data);
+
+        String getUrl = "/get/with/callback/path/part";
+        String responseData = "{\"id\":\"$(!UUID)\", \"name\":\"response-name\"}";
+        wireMockServer.stubFor(get(getUrl)
+                .withPostServeAction("callback-simulator", callbacks)
+                .willReturn(aResponse().withStatus(200)
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseData)
+                        .withTransformers("json-body-transformer")));
+
+        String responseJson = given().accept("application/json")
+                .get(getUrl).then().statusCode(200).extract().asString();
+
+        JsonNode response = Json.node(responseJson);
+        String id = response.get("id").textValue();
+        String name = response.get("name").textValue();
+        sleep();
+
+        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.event == 'callback-defined-event')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.name == '" + name + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.part == 'path')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp)]")));
     }
 

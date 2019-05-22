@@ -28,6 +28,10 @@ public class Callbacks {
         return Callbacks.of(Callback.of(delay, url, data));
     }
 
+    public static Callbacks of(int delay, String url, String username, String password, Object data) {
+        return Callbacks.of(Callback.of(delay, url, username, password, data));
+    }
+
     /**
      * Creates a callback definition for the specified {@code callbacks}.
      *

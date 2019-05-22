@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,14 +57,10 @@ public class Placeholders {
         return Placeholders.replaceValuesInJson(responsePlaceholders, jsonToTransform);
     }
 
-    /**
-     * Indicates whether the specified {@code string} is a placeholder.
-     *
-     * @param string the {@link String} to check.
-     * @return {@code true} if the specified {@code string} is a placeholder; otherwise {@code false}.
-     */
-    public static boolean isPlaceholder(String string) {
-        return PLACEHOLDER_PATTERN.asPredicate().test(string);
+    public static List<String> splitUrl(String url) {
+        return Stream.of(url.split("/"))
+                .filter(s -> !Strings.isNullOrEmpty(s))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -71,7 +68,7 @@ public class Placeholders {
      *
      * @param json the JSON {@link String} to create the {@link DocumentContext} for.
      * @return the {@link DocumentContext} for the specified {@code json} string or {@code null} if {@code json} is
-     *         {@code null} or empty ({@code ""}.
+     *         {@code null} or empty ({@code ""}).
      */
     public static DocumentContext documentContextOf(String json) {
         DocumentContext result = (json != null && json.trim().length() > 0) ? PARSE_CONTEXT.parse(json) : null;
@@ -86,7 +83,7 @@ public class Placeholders {
      * @param json the JSON {@link String} that may contain placeholders.
      * @return a {@link Map} containing entries for all found placeholders.
      */
-    public static Map<String, Object> parseJsonBody(String json) {
+    private static Map<String, Object> parseJsonBody(String json) {
         Map<String, Object> result = new LinkedHashMap<>();
         Matcher matcher = PLACEHOLDER_PATTERN.matcher(json);
         while (matcher.find()) {
@@ -101,28 +98,13 @@ public class Placeholders {
     }
 
     /**
-     * Traverses the specified {@code placeholders} and parses the specified {@code json} for each placeholder who's
-     * value is {@code null}.
-     *
-     * @param placeholders the {@link Map} of placeholders to parse values for.
-     * @param json the JSON {@link String} to look for values.
-     */
-    public static void parsePlaceholderValues(Map<String, Object> placeholders, String json) {
-        // if placeholders is null or empty or all values are set we are already done
-        if (placeholders == null || placeholders.isEmpty() || !placeholders.containsValue(null)) {
-            return;
-        }
-        parsePlaceholderValues(placeholders, documentContextOf(json));
-    }
-
-    /**
      * Traverses the specified {@code placeholders} and parses the specified {@code documentContext} for each
      * placeholder who's value is {@code null}.
      *
      * @param placeholders the {@link Map} of placeholders to parse values for.
      * @param documentContext the JSON {@link DocumentContext} to look for values.
      */
-    public static void parsePlaceholderValues(Map<String, Object> placeholders, DocumentContext documentContext) {
+    private static void parsePlaceholderValues(Map<String, Object> placeholders, DocumentContext documentContext) {
         // if placeholders is null or empty or all values are set we are already done
         if (placeholders == null || placeholders.isEmpty() || !placeholders.containsValue(null)) {
             return;
@@ -137,7 +119,7 @@ public class Placeholders {
         LOG.debug("parsePlaceholderValues('{}', {})", placeholders, describe(documentContext));
     }
 
-    public static String replaceValuesInJson(Map<String, Object> placeholders, String json) {
+    private static String replaceValuesInJson(Map<String, Object> placeholders, String json) {
         String result = json;
         for (Entry<String, Object> placeholder : placeholders.entrySet()) {
             String pattern = placeholder.getKey();
@@ -152,18 +134,11 @@ public class Placeholders {
         return result;
     }
 
-    private static String patternToJsonPath(String pattern) {
-        // change $( to // $. and remove trailing )
-        String result = pattern.replaceFirst("\\$\\(", "\\$\\.").substring(0, pattern.length() - 1);
-        LOG.debug("patternToJsonPath('{}') -> '{}'", pattern, result);
-        return result;
-    }
-
-    public static Object populatePlaceholder(String pattern) {
+    private static Object populatePlaceholder(String pattern) {
         return populatePlaceholder(pattern, null);
     }
 
-    public static Object populatePlaceholder(String pattern, DocumentContext documentContext) {
+    private static Object populatePlaceholder(String pattern, DocumentContext documentContext) {
         Object result = null;
         Matcher isKey = KEYWORD_PATTERN.matcher(pattern);
         if (isKey.matches()) {
@@ -171,7 +146,8 @@ public class Placeholders {
             Keyword keyword = Keyword.of(isKey.group(1));
             result = keyword.value(isKey.group(2));
         } else if (documentContext != null) {
-            result = documentContext.read(patternToJsonPath(pattern));
+            Placeholder placeholder = Placeholder.of(pattern);
+            result = placeholder.getValue(documentContext);
         }
         LOG.debug("populatePlaceholder('{}', '{}') -> '{}'", pattern, describe(documentContext), describe(result));
         return result;

@@ -2,6 +2,7 @@ package com.ninecookies.wiremock.extensions;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import com.github.tomakehurst.wiremock.extension.ResponseTransformer;
 import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.http.Response;
+import com.jayway.jsonpath.DocumentContext;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
 
 public class JsonBodyTransformer extends ResponseTransformer {
@@ -30,8 +32,8 @@ public class JsonBodyTransformer extends ResponseTransformer {
             return response;
         }
         String responseBody = response.getBodyAsString();
-        String requestBody = extractJsonBody(request);
-        String transformedResponseBody = Placeholders.transformJson(requestBody, responseBody);
+        DocumentContext placeholderSource = preparePlaceholderSource(request);
+        String transformedResponseBody = Placeholders.transformJson(placeholderSource, responseBody);
         Response result = Response.Builder.like(response).but().body(transformedResponseBody).build();
         return result;
     }
@@ -62,18 +64,21 @@ public class JsonBodyTransformer extends ResponseTransformer {
         return true;
     }
 
-    private String extractJsonBody(Request request) {
-        String result = null;
+    private DocumentContext preparePlaceholderSource(Request request) {
+        String json = "{}";
         if (METHODS_WITH_CONTENT.contains(request.getMethod())) {
             if (!request.contentTypeHeader().isPresent()
                     || !CONTENT_TYPE_APPLICATION_JSON.equals(request.contentTypeHeader().mimeTypePart())) {
                 LOG.debug("skip request parsing due to content type '{}'", request.contentTypeHeader());
             } else {
-                result = request.getBodyAsString();
+                json = request.getBodyAsString();
             }
         } else {
             LOG.debug("skip request parsing due to method '{}'", request.getMethod());
         }
-        return result;
+
+        List<String> urlParts = Placeholders.splitUrl(request.getUrl());
+        DocumentContext result = Placeholders.documentContextOf(json);
+        return result.put("$", "urlParts", urlParts);
     }
 }
