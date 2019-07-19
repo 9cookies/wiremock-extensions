@@ -24,10 +24,10 @@ import org.slf4j.LoggerFactory;
 
 import com.github.tomakehurst.wiremock.common.Json;
 import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.Configuration.ConfigurationBuilder;
 import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.ParseContext;
+import com.jayway.jsonpath.internal.JsonContext;
 
 /**
  * Provides convenient methods to parse, populate and replace placeholders in JSON strings.
@@ -43,9 +43,10 @@ public class Placeholders {
     private static final Pattern KEYWORD_PATTERN = Pattern.compile("\\$\\(!(" +
             Stream.of(Keyword.keywords()).map(Keyword::keyword).collect(Collectors.joining("|"))
             + ")(.*)\\)");
-    private static final ParseContext PARSE_CONTEXT = JsonPath.using(Configuration.builder()
+
+    private static final ConfigurationBuilder JSON_CONTEXT_CONFIGURATION_BUILDER = Configuration.builder()
             .options(Option.DEFAULT_PATH_LEAF_TO_NULL)
-            .options(Option.SUPPRESS_EXCEPTIONS).build());
+            .options(Option.SUPPRESS_EXCEPTIONS);
 
     public static String transformJson(String placeholderSource, String jsonToTransform) {
         return transformJson(documentContextOf(placeholderSource), jsonToTransform);
@@ -71,7 +72,11 @@ public class Placeholders {
      *         {@code null} or empty ({@code ""}).
      */
     public static DocumentContext documentContextOf(String json) {
-        DocumentContext result = (json != null && json.trim().length() > 0) ? PARSE_CONTEXT.parse(json) : null;
+        JsonContext result = null;
+        if (json != null && json.trim().length() > 0) { // ? PARSE_CONTEXT.parse(json) : null;
+            result = new JsonContext(JSON_CONTEXT_CONFIGURATION_BUILDER.build());
+            result.parse(json);
+        }
         LOG.debug("documentContextOf('{}') -> '{}'", json, describe(result));
         return result;
     }
