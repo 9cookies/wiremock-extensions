@@ -7,8 +7,9 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * definitions programmatically for WireMock stubbing.
  *
  * @author M.Scheepers
- * @since 0.0.1
+ * @since 0.0.6
  * @see Callbacks
+ * @see Authentication
  */
 public class Callback {
 
@@ -43,6 +44,16 @@ public class Callback {
         return of(delay, url, null, null, data);
     }
 
+    /**
+     * Creates a new instance for a {@link Callback} definition with Basic authentication.
+     * 
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param url the destination URL for the callback's POST data.
+     * @param username the user name for the callback authentication.
+     * @param password the password for the callback authentication.
+     * @param data the callback data to POST.
+     * @return a new {@link Callback} instance ready to use.
+     */
     public static Callback of(int delay, String url, String username, String password, Object data) {
         Callback result = new Callback();
         result.delay = delay;

@@ -9,8 +9,9 @@ import java.util.Set;
  * callback definitions programmatically for Wiremock stubbing.
  *
  * @author M.Scheepers
- * @since 0.0.1
+ * @since 0.0.6
  * @see Callback
+ * @see Authentication
  */
 public class Callbacks {
 
@@ -19,7 +20,7 @@ public class Callbacks {
     /**
      * Creates a callback definition for one callback to simulate.
      *
-     * @param delay the period of time in seconds to wait before the callback data is POSTed.
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
      * @param url the destination URL for the callbacks POST data.
      * @param data the callback data to POST.
      * @return a new {@link Callbacks} instance ready to use.
@@ -28,6 +29,16 @@ public class Callbacks {
         return Callbacks.of(Callback.of(delay, url, data));
     }
 
+    /**
+     * Creates a callback definition for one callback with Basic authentication to simulate.
+     *
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param url the destination URL for the callbacks POST data.
+     * @param username the user name for the callback authentication.
+     * @param password the password for the callback authentication.
+     * @param data the callback data to POST.
+     * @return a new {@link Callbacks} instance ready to use.
+     */
     public static Callbacks of(int delay, String url, String username, String password, Object data) {
         return Callbacks.of(Callback.of(delay, url, username, password, data));
     }
@@ -35,7 +46,7 @@ public class Callbacks {
     /**
      * Creates a callback definition for the specified {@code callbacks}.
      *
-     * @param callbacks a list of callback definitions.
+     * @param callbacks a list of {@link Callback} definitions.
      * @return a new {@link Callbacks} instance ready to use.
      */
     public static Callbacks of(Callback... callbacks) {

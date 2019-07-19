@@ -1,8 +1,22 @@
 package com.ninecookies.wiremock.extensions.api;
 
+/**
+ * Represents callback related authentication information.
+ *
+ * @author M.Scheepers
+ * @since 0.0.6
+ * @see Callback
+ * @see Callbacks
+ */
 public class Authentication {
 
+    /**
+     * Defines the supported authentication methods.
+     */
     public enum Type {
+        /**
+         * The Basic authentication type.
+         */
         BASIC
     }
 

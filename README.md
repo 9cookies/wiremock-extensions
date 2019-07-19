@@ -19,14 +19,14 @@ The project is based on Java 8, uses Maven as build tool and provides extensions
 You can find further information in the [documentation](keywords.md).
 
 ## Value referencing
-The response body stub as well as the callback body stub act as a template where match pattern may be defined and which will be replaced by matching JsonPaths.
+The response and callback body stubs act as templates where match pattern may be defined and which will be replaced by matching JsonPaths.
 
 ## The JSON Body Transformer
 It implements WireMock's `ResponseTransformer` and is an extension that is able to parse a JSON request body using [JsonPath](https://github.com/jayway/JsonPath) and interpolates found results into the JSON response that is returned by WireMock. It allows your WireMock response to be dynamically depending on the JSON request body. It was inspired by the [wiremock-body-transformer](https://github.com/opentable/wiremock-body-transformer) but focus only on JSON contents to provide support for JsonPath patterns. Thus even complex JSON can be handled during response manipulation.
 You can find further information in the [documentation](json-body-transformer.md).
 
 ## The Callback Simulator
-It implements WireMock's `PostServeAction` and is an extension that is able to emit POST requests to arbitrary URLs. It allows you WireMock callback to be dynamically depending on the JSON request and response bodies of the related request.
+It implements WireMock's `PostServeAction` and is an extension that is able to emit POST requests to arbitrary URLs. It allows your WireMock callback to be dynamically depending on the JSON request and response bodies of the related request.
 You can find further information in the [documentation](callback-simulator.md).
 
 ### Maven usage
@@ -58,7 +58,7 @@ Add the following dependency to your projects `pom.xml` file.
 <dependency>
 	<groupId>com.ninecookies.wiremock.extensions</groupId>
 	<artifactId>json-body-transformer</artifactId>
-	<version>0.0.4</version>
+	<version>0.0.6</version>
 </dependency>
 ```
 
@@ -95,7 +95,7 @@ Add the following dependency to your projects `pom.xml` file.
 		<dependency>
 			<groupId>com.ninecookies.wiremock.extensions</groupId>
 			<artifactId>json-body-transformer</artifactId>
-			<version>0.0.4</version>
+			<version>0.0.6</version>
 		</dependency>
 	</dependencies>
 	<executions>
