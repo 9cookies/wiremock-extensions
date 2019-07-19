@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # uncomment to debug this script
-set -x
+#set -x
 
 # expose the docker host's ip address in /etc/hosts as host.docker.internal
 # to work around https://github.com/docker/for-linux/issues/264

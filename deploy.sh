@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # exist script if something goes wrong
-set -ex
+set -e
 # wiremock and extension versions for docker
 wiremockVersion=$(mvn -f pom.xml -q help:evaluate -Dexpression=wiremock.version -DforceStdout)
 extensionVersion=$(mvn -f pom.xml -q help:evaluate -Dexpression=project.version -DforceStdout)

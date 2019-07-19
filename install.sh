@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 echo "initialize build"
 wiremockVersion=$(mvn -f pom.xml -q help:evaluate -Dexpression=wiremock.version -DforceStdout)
