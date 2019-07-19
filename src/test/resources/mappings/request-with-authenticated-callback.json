@@ -1,7 +1,7 @@
 {
 	"uuid": "1a773789-8dd4-4251-8ec8-def69563045f",
 	"request": {
-		"url": "/request/with/callback",
+		"url": "/authenticated/callback",
 		"method": "POST"
 	},
 	"response": {
@@ -25,14 +25,10 @@
 					  "password": "pass"
 					},
 					"data": {
-						"id": "$(response.id)",
-						"value": "defined-in-mapping-file",
-						"timestamp": "2019-03-04T17:05:43.596Z",
-						"path_part": "$(urlParts[1])",
-						"driver": {
-							"id": "driver-id",
-							"name": "driver-name"
-						}
+                        "response_id": "$(response.id)",
+                        "request_code": "$(request.code)",
+                        "url_parts_1": "$(urlParts[1])",
+                        "defined_value": "from-mapping-file"
 					}
 				}
 			]

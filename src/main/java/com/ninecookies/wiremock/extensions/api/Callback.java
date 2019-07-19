@@ -4,7 +4,7 @@ import com.ninecookies.wiremock.extensions.util.Strings;
 
 /**
  * Represents a single callback definition for the callback simulator post serve action to conveniently compose callback
- * definitions programmatically for Wiremock stubbing.
+ * definitions programmatically for WireMock stubbing.
  *
  * @author M.Scheepers
  * @since 0.0.1
@@ -13,7 +13,7 @@ import com.ninecookies.wiremock.extensions.util.Strings;
 public class Callback {
 
     /**
-     * The period of time in seconds to wait before the callback {@link #data} is POSTed to the {@link #url}.
+     * The period of time in milliseconds to wait before the callback {@link #data} is POSTed to the {@link #url}.
      */
     public long delay;
     /**
@@ -34,8 +34,8 @@ public class Callback {
     /**
      * Creates a new instance for a {@link Callback} definition.
      *
-     * @param delay the period of time in seconds to wait before the callback data is POSTed.
-     * @param url the destination URL for the callbacks POST data.
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param url the destination URL for the callback's POST data.
      * @param data the callback data to POST.
      * @return a new {@link Callback} instance ready to use.
      */

@@ -1,6 +1,7 @@
 package com.ninecookies.wiremock.extensions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
@@ -76,29 +77,42 @@ public class CallbackSimulatorTest {
         wireMockServer.resetRequests();
     }
 
+    private static final String CALLBACK_POST_DATA_FORMAT = "{\"code\":\"%s\"}";
+    private static final String EXPECTED_CALLBACK_JSON_FORMAT = "{\"response_id\":\"%s\",\"request_code\":\"%s\"," +
+            "\"url_parts_1\":\"callback\",\"defined_value\":\"from-mapping-file\"}";
+
     @Test
-    public void testCallbackWithMapping() throws InterruptedException {
-        String requestUrl = "/request/with/callback";
-
-        String requestBody = "{\"code\":\"b63868c0\","
-                + "\"promised_delivery_at\":\"2019-03-14T16:09:19.748Z\","
-                + "\"preparation_time\":10,\"preparation_buffer\":2}";
-
+    public void testAuthenticatedCallbackWithMapping() throws InterruptedException {
+        String code = "b63868c0";
+        String requestUrl = "/authenticated/callback";
+        String requestBody = String.format(CALLBACK_POST_DATA_FORMAT, code);
         String responseJson = given().body(requestBody).contentType("application/json")
                 .when().post(requestUrl)
                 .then().statusCode(201)
                 .extract().asString();
-
         String id = Json.node(responseJson).get("id").textValue();
+        String json = String.format(EXPECTED_CALLBACK_JSON_FORMAT, id, code);
         sleep();
         wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks"))
                 .withBasicAuth(new BasicCredentials("user", "pass"))
-                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.value == 'defined-in-mapping-file')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '2019-03-04T17:05:43.596Z')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.driver.id == 'driver-id')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.path_part == 'with')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.driver.name == 'driver-name')]")));
+                .withRequestBody(equalToJson(json)));
+    }
+
+    @Test
+    public void testUnauthenticatedCallbackWithMapping() throws InterruptedException {
+        String code = "f4625223";
+        String requestUrl = "/unauthenticated/callback";
+        String requestBody = String.format(CALLBACK_POST_DATA_FORMAT, code);
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+        String id = Json.node(responseJson).get("id").textValue();
+        String json = String.format(EXPECTED_CALLBACK_JSON_FORMAT, id, code);
+        sleep();
+        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks"))
+                .withoutHeader("Authorization")
+                .withRequestBody(equalToJson(json)));
     }
 
     @Test

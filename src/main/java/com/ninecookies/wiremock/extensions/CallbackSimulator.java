@@ -3,9 +3,12 @@ package com.ninecookies.wiremock.extensions;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -44,9 +47,92 @@ import com.ninecookies.wiremock.extensions.util.Objects;
 import com.ninecookies.wiremock.extensions.util.Placeholder;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
 
+/**
+ * Implements the {@link PostServeAction} interface and provides the ability to specify callback invocations for request
+ * mappings.
+ * <p>
+ * This class utilizes the {@link ScheduledExecutorService} and configures it with a core pool size of
+ * {@value #CORE_POOL_SIZE} and a {@link ThreadFactory} that produces daemon {@link Thread}s.
+ *
+ * @author M.Scheepers
+ * @since 0.0.6
+ */
 public class CallbackSimulator extends PostServeAction {
 
-    public static class PostTask extends TimerTask {
+    private static final Logger LOG = LoggerFactory.getLogger(CallbackSimulator.class);
+    private static final int CORE_POOL_SIZE = 50;
+    private static int instances = 0;
+    private final long instance = ++instances;
+
+    private final ScheduledExecutorService executor = Executors
+            .newScheduledThreadPool(CORE_POOL_SIZE, new DaemonThreadFactory());
+
+    @Override
+    public String getName() {
+        return "callback-simulator";
+    }
+
+    @Override
+    public void doAction(ServeEvent serveEvent, Admin admin, Parameters parameters) {
+        LOG.debug("doAction[{}](serveEvent: {}, admin: {}, parameters: {})", instance, serveEvent, admin, parameters);
+
+        List<String> urlParts = Placeholders.splitUrl(serveEvent.getRequest().getUrl());
+
+        // compose JSON path parsable request/response/path json
+        DocumentContext servedJson = Placeholders.documentContextOf("{\"request\":"
+                + serveEvent.getRequest().getBodyAsString() + ", \"response\":"
+                + serveEvent.getResponse().getBodyAsString() + ", \"urlParts\":"
+                + Json.write(urlParts) + "}");
+
+        Callbacks callbacks = parameters.as(Callbacks.class);
+
+        for (Callback callback : callbacks.callbacks) {
+            LOG.debug("callback.data: {}", Objects.describe(callback.data));
+            String dataJson = Placeholders.transformJson(servedJson, Json.write(callback.data));
+            LOG.debug("final data: {}", dataJson);
+            Object url = Placeholder.containsPattern(callback.url)
+                    ? Placeholder.of(callback.url).getSubstitute(servedJson)
+                    : callback.url;
+            LOG.info("scheduling callback task to: '{}' with delay '{}' and data '{}'", url, callback.delay, dataJson);
+
+            executor.schedule(
+                    PostTask.of(url.toString(), callback.authentication, dataJson),
+                    callback.delay,
+                    TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /**
+     * Implements {@link ThreadFactory} producing daemon threads ({@link Thread#isDaemon()} is {@code true}) to use
+     * with {@link ScheduledExecutorService} to avoid that {@link CallbackSimulator} blocks WireMock shutdown.
+     */
+    private static final class DaemonThreadFactory implements ThreadFactory {
+        private static final AtomicInteger POOL_NUMBER = new AtomicInteger(1);
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+        private final String name;
+
+        private DaemonThreadFactory() {
+            name = "callback-timer-" + POOL_NUMBER.getAndIncrement() + "-thread-";
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread result = new Thread(r, name + threadNumber.getAndIncrement());
+            if (!result.isDaemon()) {
+                result.setDaemon(true);
+            }
+            if (result.getPriority() != Thread.NORM_PRIORITY) {
+                result.setPriority(Thread.NORM_PRIORITY);
+            }
+            return result;
+        }
+    }
+
+    /**
+     * Implements {@link Runnable} and uses {@link HttpPost} in combination with {@link HttpEntity} and
+     * {@link HttpContext} to POST the specified callback JSON payload to the specified callback URL.
+     */
+    private static final class PostTask implements Runnable {
 
         private static final RequestConfig REQUEST_CONFIG = RequestConfig.custom()
                 .setSocketTimeout(2_000)
@@ -95,7 +181,7 @@ public class CallbackSimulator extends PostServeAction {
             return result;
         }
 
-        public static PostTask of(String uri, Authentication authentication, String jsonContent) {
+        private static Runnable of(String uri, Authentication authentication, String jsonContent) {
             PostTask result = new PostTask();
             result.uri = URI.create(uri);
             result.content = new StringEntity(jsonContent, ContentType.APPLICATION_JSON);
@@ -125,42 +211,6 @@ public class CallbackSimulator extends PostServeAction {
             context.setCredentialsProvider(credentialsProvider);
             context.setAuthCache(authCache);
             return context;
-        }
-    }
-
-    private static final Logger LOG = LoggerFactory.getLogger(CallbackSimulator.class);
-    private static long instances = 0;
-    private final long instance = ++instances;
-    private final Timer timer = new Timer("callback-timer", true);
-
-    @Override
-    public String getName() {
-        return "callback-simulator";
-    }
-
-    @Override
-    public void doAction(ServeEvent serveEvent, Admin admin, Parameters parameters) {
-        LOG.debug("doAction[{}](serveEvent: {}, admin: {}, parameters: {})", instance, serveEvent, admin, parameters);
-
-        List<String> urlParts = Placeholders.splitUrl(serveEvent.getRequest().getUrl());
-
-        // compose JSON path parsable request/response/path json
-        DocumentContext servedJson = Placeholders.documentContextOf("{\"request\":"
-                + serveEvent.getRequest().getBodyAsString() + ", \"response\":"
-                + serveEvent.getResponse().getBodyAsString() + ", \"urlParts\":"
-                + Json.write(urlParts) + "}");
-
-        Callbacks callbacks = parameters.as(Callbacks.class);
-
-        for (Callback callback : callbacks.callbacks) {
-            LOG.debug("callback.data: {}", Objects.describe(callback.data));
-            String dataJson = Placeholders.transformJson(servedJson, Json.write(callback.data));
-            LOG.debug("final data: {}", dataJson);
-            Object url = Placeholder.containsPattern(callback.url)
-                    ? Placeholder.of(callback.url).getSubstitute(servedJson)
-                    : callback.url;
-            LOG.info("scheduling callback task to: '{}' with delay '{}' and data '{}'", url, callback.delay, dataJson);
-            timer.schedule(PostTask.of(url.toString(), callback.authentication, dataJson), callback.delay);
         }
     }
 }
