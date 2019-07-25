@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
@@ -16,7 +17,7 @@
 		<project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
 
 		<java.version>1.8</java.version>
-		
+
 		<jsonpath.version>2.2.0</jsonpath.version>
 		<httpclient.version>4.5.6</httpclient.version>
 		<slf4j.version>1.7.26</slf4j.version>
@@ -36,7 +37,7 @@
 		<developerConnection>scm:git:ssh://github.com/9cookies/wiremock-extensions.git</developerConnection>
 		<url>https://github.com/9cookies/wiremock-extensions</url>
 	</scm>
-	
+
 	<distributionManagement>
 		<repository>
 			<id>local-releases</id>
@@ -68,21 +69,21 @@
 		</dependency>
 		<!-- used to simulate callback requests -->
 		<dependency>
-    		<groupId>org.apache.httpcomponents</groupId>
-    		<artifactId>httpclient</artifactId>
-    		<version>${httpclient.version}</version>
-    	</dependency>
-    	<!-- logging -->
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>${httpclient.version}</version>
+		</dependency>
+		<!-- logging -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j-impl</artifactId>
 			<version>${log4j.version}</version>
 		</dependency>
-        <dependency>
-            <groupId>com.vlkan.log4j2</groupId>
-            <artifactId>log4j2-logstash-layout</artifactId>
-            <version>${log4j2-logstash.version}</version>
-        </dependency>
+		<dependency>
+			<groupId>com.vlkan.log4j2</groupId>
+			<artifactId>log4j2-logstash-layout</artifactId>
+			<version>${log4j2-logstash.version}</version>
+		</dependency>
 
 		<!-- provided dependencies -->
 		<dependency>
@@ -143,34 +144,34 @@
 		</resources>
 		<plugins>
 			<plugin>
-	            <groupId>com.github.github</groupId>
-	            <artifactId>site-maven-plugin</artifactId>
-	            <version>0.12</version>
-				<!-- this plug-in has issues with username / author / committer / whatever property/name is null might be
-				see https://github.com/github/maven-plugins/issues/85
-				final solution was to configure user name on github account profile.
-				-->
-	            <configuration>
-	            	<repositoryOwner>9cookies</repositoryOwner>
-	            	<repositoryName>mvn-repo</repositoryName>
-	            	<server>github</server>
-	            	<branch>refs/heads/master</branch>
-	            	<outputDirectory>${project.build.directory}/mvn-repo</outputDirectory>
-	            	<merge>true</merge>
-	                <message>Maven artifacts for ${project.artifactId}.${project.version}</message>
-	                <includes>
-	                	<include>**/*</include>
-	                </includes>
-	            </configuration>
-	            <executions>
-	              <execution>
-	                <goals>
-	                  <goal>site</goal>
-	                </goals>
-	                <phase>deploy</phase>
-	              </execution>
-	            </executions>
-	        </plugin>
+				<groupId>com.github.github</groupId>
+				<artifactId>site-maven-plugin</artifactId>
+				<version>0.12</version>
+				<!-- this plug-in has issues with username / author / committer / whatever 
+					property/name is null might be see https://github.com/github/maven-plugins/issues/85 
+					final solution was to configure user name on github account profile. -->
+				<configuration>
+					<repositoryOwner>9cookies</repositoryOwner>
+					<repositoryName>mvn-repo</repositoryName>
+					<server>github</server>
+					<branch>refs/heads/master</branch>
+					<outputDirectory>${project.build.directory}/mvn-repo</outputDirectory>
+					<merge>true</merge>
+					<message>Maven artifacts for
+						${project.artifactId}.${project.version}</message>
+					<includes>
+						<include>**/*</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>site</goal>
+						</goals>
+						<phase>deploy</phase>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-enforcer-plugin</artifactId>
@@ -226,7 +227,7 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>			
+			</plugin>
 		</plugins>
 	</build>
 </project>
