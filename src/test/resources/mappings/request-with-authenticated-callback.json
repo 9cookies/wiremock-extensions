@@ -1,0 +1,37 @@
+{
+	"uuid": "1a773789-8dd4-4251-8ec8-def69563045f",
+	"request": {
+		"url": "/authenticated/callback",
+		"method": "POST"
+	},
+	"response": {
+		"status": 201,
+		"body": "{\"id\":\"$(!UUID)\"}",
+		"headers": {
+			"content-type": "application/json"
+		},
+		"transformers": [
+			"json-body-transformer"
+		]
+	},
+	"postServeActions": {
+		"callback-simulator": {
+			"callbacks": [
+				{
+					"delay": 100,
+					"url": "http://localhost:9090/callbacks",
+					"authentication":  {
+					  "username": "user",
+					  "password": "pass"
+					},
+					"data": {
+                        "response_id": "$(response.id)",
+                        "request_code": "$(request.code)",
+                        "url_parts_1": "$(urlParts[1])",
+                        "defined_value": "from-mapping-file"
+					}
+				}
+			]
+		}
+	}
+}
