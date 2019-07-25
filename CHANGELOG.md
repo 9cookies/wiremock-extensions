@@ -10,6 +10,7 @@ Author: M.Scheepers
 
 ### Changes
 - introduced a callback simulator post serve action that will perform configurable requests to arbitrary services
+- bumped jackson version to 2.9.9.1 due to  [security issue](https://nvd.nist.gov/vuln/detail/CVE-2019-12814) 
 
 
 ## 2019-03-01 - Enhancement
