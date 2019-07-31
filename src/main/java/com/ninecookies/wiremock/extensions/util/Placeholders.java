@@ -4,7 +4,9 @@ import static com.ninecookies.wiremock.extensions.util.Objects.describe;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -40,7 +42,8 @@ public class Placeholders {
     private static final Logger LOG = LoggerFactory.getLogger(Placeholders.class);
     private static final UnaryOperator<String> QUOTES = s -> String.format("\"%s\"", s);
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\(.*?\\)");
-    private static final Pattern KEYWORD_PATTERN = Pattern.compile("\\$\\(!(" +
+    // visible for testing
+    static final Pattern KEYWORD_PATTERN = Pattern.compile("\\$\\(!(" +
             Stream.of(Keyword.keywords()).map(Keyword::keyword).collect(Collectors.joining("|"))
             + ")(.*)\\)");
 
@@ -158,7 +161,8 @@ public class Placeholders {
         return result;
     }
 
-    private static abstract class Keyword {
+    // visible for testing
+    static abstract class Keyword {
 
         public abstract String keyword();
 
@@ -180,35 +184,45 @@ public class Placeholders {
             }
         }
 
-        private static final Function<String, Instant> INSTANT_PROVIDER = s -> {
-            Instant result = Instant.now();
-            Matcher arguments = IS_CALCULATED.matcher(s);
+        @SuppressWarnings("unchecked")
+        private static <T extends Temporal> T calculateIfRequired(String pattern, T temporal) {
+            Matcher arguments = IS_CALCULATED.matcher(pattern);
             if (arguments.find()) {
-                return result.plus(Duration.of(Long.parseLong(arguments.group(2)),
+                return (T) temporal.plus(Duration.of(Long.parseLong(arguments.group(2)),
                         stringToChronoUnit(arguments.group(1))));
             }
-            if (s.startsWith(".plus[")) {
+            if (pattern.startsWith(".plus[")) {
                 // unmatched calculation pattern
-                throw new IllegalArgumentException("invalid time calcuation pattern: '" + s + "'");
+                throw new IllegalArgumentException("invalid time calcuation pattern: '" + pattern + "'");
             }
-            return result;
+            return temporal;
+        }
+
+        private static final Function<String, OffsetDateTime> OFFSET_DATE_TIME_PROVIDER = s -> {
+            return calculateIfRequired(s, OffsetDateTime.now());
+        };
+
+        private static final Function<String, Instant> INSTANT_PROVIDER = s -> {
+            return calculateIfRequired(s, Instant.now());
         };
 
         private static final Keyword UUID = new SimpleKeyword("UUID", s -> java.util.UUID.randomUUID().toString());
         private static final Keyword RANDOM = new SimpleKeyword("Random", s -> RANDOM_GENERATOR.nextInt());
         private static final Keyword INSTANT = new SimpleKeyword("Instant", s -> INSTANT_PROVIDER.apply(s).toString());
-        private static final Keyword TIMESTAMP =
-                new SimpleKeyword("Timestamp", s -> INSTANT_PROVIDER.apply(s).toEpochMilli());
-
+        private static final Keyword TIMESTAMP = new SimpleKeyword("Timestamp",
+                s -> INSTANT_PROVIDER.apply(s).toEpochMilli());
+        private static final Keyword OFFSET_DATE_TIME = new SimpleKeyword("OffsetDateTime",
+                s -> OFFSET_DATE_TIME_PROVIDER.apply(s).toString());
         private static final Map<String, Keyword> VALUES = Collections.unmodifiableMap(Stream
-                .of(UUID, RANDOM, INSTANT, TIMESTAMP)
+                .of(UUID, RANDOM, INSTANT, TIMESTAMP, OFFSET_DATE_TIME)
                 .collect(Collectors.toMap(Keyword::keyword, k -> k)));
 
         private static Keyword[] keywords() {
             return VALUES.values().toArray(new Keyword[VALUES.size()]);
         }
 
-        private static Keyword of(String key) {
+        // visible for testing
+        static Keyword of(String key) {
             return VALUES.get(key);
         }
 
