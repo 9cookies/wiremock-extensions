@@ -1,6 +1,6 @@
 # Change Log
 
-## 2019-mm-dd - Enhancement
+## 2019-07-31 - Enhancement
 
 Important Notes: none
 
