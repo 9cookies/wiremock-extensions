@@ -1,5 +1,23 @@
 # Change Log
 
+## 2019-mm-dd - <changes>
+
+Important Notes: - none
+
+Version: 0.0.7
+
+Author: - none
+
+### Features
+- none
+
+### Improvements
+- none
+
+### Fixes
+- none
+
+
 ## 2019-07-31 - Enhancement
 
 Important Notes: none
