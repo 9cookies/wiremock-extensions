@@ -18,7 +18,7 @@ import com.ninecookies.wiremock.extensions.util.Placeholders.Keyword;
 
 public class PlaceholdersKeywordTest {
 
-    private static final long OFFSET_MILLIS = 500;
+    private static final long OFFSET_MILLIS = 600;
 
     @Test
     public void testUUIDPattern() {
