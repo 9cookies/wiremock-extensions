@@ -1,4 +1,4 @@
-package com.ninecookies.wiremock.extensions;
+package com.ninecookies.wiremock.extensions.util;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
