@@ -34,22 +34,24 @@ You can find further information in the [documentation](callback-simulator.md).
 This extension is not hosted on Maven central but on github. To use this artifact add the following repository definition either to your maven `settings.xml` or to the `pom.xml` file of your project that makes use of WireMock.
 
 ```XML
-<repository>
-	<id>9c-snapshots</id>
-    <url>https://raw.github.com/9ccookies/mvn-repo/master/snapshots/</url>
-    <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-    </snapshots>
-</repository>
-<repository>
-    <id>9c-releases</id>
-    <url>https://raw.github.com/9ccookies/mvn-repo/master/releases/</url>
-    <releases>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-    </releases>
-</repository>
+<repositories>
+    <repository>
+    	<id>9c-snapshots</id>
+        <url>https://raw.github.com/9cookies/mvn-repo/master/snapshots/</url>
+        <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+        </snapshots>
+    </repository>
+    <repository>
+        <id>9c-releases</id>
+        <url>https://raw.github.com/9cookies/mvn-repo/master/releases/</url>
+        <releases>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+        </releases>
+    </repository>
+</repositories>
 ```
 
 Add the following dependency to your projects `pom.xml` file.
@@ -57,13 +59,14 @@ Add the following dependency to your projects `pom.xml` file.
 ```XML
 <dependency>
 	<groupId>com.ninecookies.wiremock.extensions</groupId>
-	<artifactId>json-body-transformer</artifactId>
+	<artifactId>wiremock-extensions</artifactId>
 	<version>0.0.6</version>
 </dependency>
 ```
 
 ### Maven plug-in usage
 
+See [WireMock Maven Plugin](https://github.com/automatictester/wiremock-maven-plugin#wiremock-maven-plugin) for details about the latest version. 
 
 ```XML
 <pluginRepositories>
@@ -94,7 +97,7 @@ Add the following dependency to your projects `pom.xml` file.
 	<dependencies>
 		<dependency>
 			<groupId>com.ninecookies.wiremock.extensions</groupId>
-			<artifactId>json-body-transformer</artifactId>
+			<artifactId>wiremock-extensions</artifactId>
 			<version>0.0.6</version>
 		</dependency>
 	</dependencies>
@@ -113,9 +116,9 @@ Add the following dependency to your projects `pom.xml` file.
 
 ### Standalone usage
 
-As WireMock supports running as a [standalone process](http://wiremock.org/docs/running-standalone/) there is also a [standalone version](https://raw.githubusercontent.com/mscookies/mvn-repo/master/releases/com/ninecookies/wiremock/extensions/json-body-transformer/0.0.1/json-body-transformer-0.0.1-jar-with-dependencies.jar) of the JsonBodyTransformer available that embeds its dependencies.
+As WireMock supports running as a [standalone process](http://wiremock.org/docs/running-standalone/) there is also a [standalone version](https://raw.github.com/9cookies/mvn-repo/master/releases/com/ninecookies/wiremock/extensions/wiremock-extensions/0.0.6/wiremock-extensions-0.0.6-jar-with-dependencies.jar) of the wiremock-extensions available that embeds its dependencies.
 
-Start WireMock as standalone process with JsonBodyTransformer enabled as follows
+Start WireMock as standalone process with JsonBodyTransformer and CallbackSimulater enabled as follows
 ```
-$ java -cp wiremock-standalone-2.5.1.jar;json-body-transformer-0.0.4-jar-with-dependencies.jar com.github.tomakehurst.wiremock.standalone.WireMockServerRunner --verbose
+$ java -cp wiremock-standalone-2.22.0.jar;wiremock-extensions-0.0.6-jar-with-dependencies.jar com.github.tomakehurst.wiremock.standalone.WireMockServerRunner --verbose --extensions com.ninecookies.wiremock.extensions.JsonBodyTransformer,com.ninecookies.wiremock.extensions.CallbackSimulator
 ```
