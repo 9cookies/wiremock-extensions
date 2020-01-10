@@ -96,7 +96,7 @@ public class CallbackSimulator extends PostServeAction {
             LOG.info("scheduling callback task to: '{}' with delay '{}' and data '{}'", url, callback.delay, dataJson);
 
             executor.schedule(
-                    PostTask.of(url.toString(), callback.authentication, dataJson),
+                    PostTask.of(url.toString(), callback.authentication, callback.traceId, dataJson),
                     callback.delay,
                     TimeUnit.MILLISECONDS);
         }
@@ -143,13 +143,14 @@ public class CallbackSimulator extends PostServeAction {
         private URI uri;
         private HttpEntity content;
         private HttpContext context;
+        private String traceId;
 
         @Override
         public void run() {
             HttpPost post = new HttpPost(uri);
             post.setConfig(REQUEST_CONFIG);
             post.setEntity(content);
-            post.addHeader("X-Rps-TraceId", UUID.randomUUID().toString().replace("-", ""));
+            post.addHeader("X-Rps-TraceId", traceId);
 
             try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
                 HttpResponse response = client.execute(post, context);
@@ -181,11 +182,12 @@ public class CallbackSimulator extends PostServeAction {
             return result;
         }
 
-        private static Runnable of(String uri, Authentication authentication, String jsonContent) {
+        private static Runnable of(String uri, Authentication authentication, String traceId, String jsonContent) {
             PostTask result = new PostTask();
             result.uri = URI.create(uri);
             result.content = new StringEntity(jsonContent, ContentType.APPLICATION_JSON);
             result.context = createHttpContext(result.uri, authentication);
+            result.traceId = traceId != null ? traceId : UUID.randomUUID().toString().replace("-", "");
             return result;
         }
 

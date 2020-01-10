@@ -1,6 +1,7 @@
 package com.ninecookies.wiremock.extensions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
@@ -381,6 +382,46 @@ public class CallbackSimulatorTest {
 
         sleep();
         wireMockServer.verify(0, postRequestedFor(urlEqualTo("/arbitrary/url")));
+    }
+
+    @Test
+    public void testCallbackWithTraceId() throws InterruptedException {
+        String requestUrl = "/request";
+        String callbackPath = "/callback";
+
+        String requestBody = "{\"code\":\"b63868c0\","
+                + "\"callbacks\":{\"order_dispatched\":\"http://localhost:" + SERVER_PORT + callbackPath + "\"},"
+                + "\"promised_delivery_at\":\"2019-03-14T16:09:19.748Z\","
+                + "\"preparation_time\":10,\"preparation_buffer\":2}";
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+        String callbackUrl = "$(request.callbacks.order_dispatched)";
+        CallbackData callbackData = CallbackData.of("aritrary-data");
+
+        Callback callback = Callback.of(DELAY, callbackUrl, callbackData);
+        callback.traceId = "my-fancy-trace-id";
+
+        wireMockServer.stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", Callbacks.of(callback))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        wireMockServer.stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String id = Json.node(responseJson).get("id").textValue();
+        sleep();
+        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+                .withHeader("X-Rps-TraceId", equalTo("my-fancy-trace-id"))
+                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData.timestamp + "')]")));
     }
 
     private void sleep() {
