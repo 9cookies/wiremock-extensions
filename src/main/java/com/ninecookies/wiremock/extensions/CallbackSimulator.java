@@ -165,13 +165,12 @@ public class CallbackSimulator extends PostServeAction {
      * Implements {@link ThreadFactory} producing daemon threads ({@link Thread#isDaemon()} is {@code true}) to use
      * with {@link ScheduledExecutorService} to avoid that {@link CallbackSimulator} blocks WireMock shutdown.
      */
-    // VisibleForTesting
-    static final class DaemonThreadFactory implements ThreadFactory {
+    private static final class DaemonThreadFactory implements ThreadFactory {
         private static final AtomicInteger POOL_NUMBER = new AtomicInteger(1);
         private final AtomicInteger threadNumber = new AtomicInteger(1);
         private final String name;
 
-        DaemonThreadFactory() {
+        private DaemonThreadFactory() {
             name = "callback-timer-" + POOL_NUMBER.getAndIncrement() + "-thread-";
         }
 
