@@ -37,21 +37,26 @@ Generating current time stamp in [ISO-8601](https://en.wikipedia.org/wiki/ISO_86
 { "created": "$(!Instant)" }
 ```
 
+Generating current time stamp in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC) offset format for a response property
+```JSON
+{ "created": "$(!OffsetDateTime)" }
+```
+
 Generating current time stamp in [Unix Epoch](https://en.wikipedia.org/wiki/Unix_time) UTC format for a response property
 ```JSON
 { "created": "$(!Timestamp)" }
 ```
 
-Generating computed time stamp for a response property using the response pattern `$(!Instant.plus[UNITAMOUNT])` for [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) or `$(!Timestamp.plus[UNITAMOUNT])` for [Unix Epoch](https://en.wikipedia.org/wiki/Unix_time) format where `UNIT` indicates the time unit and `AMOUNT` the amount to add or subtract. Valid units are `s`, `m` and `h` for seconds, minutes and hours. Units are case insensitive. Amount might be positive or negative depending on whether the desired result should be in the past (negative) or in the future (positive).
+Generating computed time stamp for a response property using the response pattern `$(!Instant.plus[UNITAMOUNT])` or `$(!OffsetDateTime.plus[UNITAMOUNT])` for [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) or `$(!Timestamp.plus[UNITAMOUNT])` for [Unix Epoch](https://en.wikipedia.org/wiki/Unix_time) format where `UNIT` indicates the time unit and `AMOUNT` the amount to add or subtract. Valid units are `s`, `m` and `h` for seconds, minutes and hours. Units are case insensitive. Amount might be positive or negative depending on whether the desired result should be in the past (negative) or in the future (positive).
 ```JSON
 {
     "one_second_in_future": "$(!Instant.plus[s1])",
     "one_second_in_past": "$(!Instant.plus[s-1])",
-    "one_minute_in_future":  "$(!Instant.plus[m1])",
-    "one_minute_in_past":  "$(!Timestamp.plus[m-1])",
+    "one_minute_in_future":  "$(!OffsetDateTime.plus[m1])",
+    "one_minute_in_past":  "$(!OffsetDateTime.plus[m-1])",
     "one_hour_in_future":  "$(!Timestamp.plus[h1])",
     "one_hour_in_past":  "$(!Timestamp.plus[h-1])"
 }
 ```
 
-Note that all time stamps are returned in UTC format.
+Note that all time stamps are returned in UTC format except offset date times which use the systems default time zone as offset.

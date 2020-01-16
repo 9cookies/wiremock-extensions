@@ -44,6 +44,21 @@ public class Callbacks {
     }
 
     /**
+     * Creates a callback definition for one callback with Basic authentication to simulate.
+     *
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param url the destination URL for the callbacks POST data.
+     * @param username the user name for the callback authentication.
+     * @param password the password for the callback authentication.
+     * @param data the callback data to POST.
+     * @param traceId the trace / request identifier to use for the callback.
+     * @return a new {@link Callbacks} instance ready to use.
+     */
+    public static Callbacks of(int delay, String url, String username, String password, String traceId, Object data) {
+        return Callbacks.of(Callback.of(delay, url, username, password, traceId, data));
+    }
+
+    /**
      * Creates a callback definition for the specified {@code callbacks}.
      *
      * @param callbacks a list of {@link Callback} definitions.
