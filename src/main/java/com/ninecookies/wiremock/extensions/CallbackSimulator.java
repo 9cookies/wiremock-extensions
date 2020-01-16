@@ -241,7 +241,6 @@ public class CallbackSimulator extends PostServeAction {
             try {
                 String jsonContent = new String(Files.readAllBytes(callbackFile.toPath()), StandardCharsets.UTF_8);
                 return Json.read(jsonContent, Callback.class);
-                // return new StringEntity(jsonContent, ContentType.APPLICATION_JSON);
             } catch (IOException e) {
                 throw new IllegalStateException("Unable to read callback content from file system", e);
             }
