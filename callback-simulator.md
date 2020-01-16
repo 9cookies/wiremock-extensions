@@ -42,8 +42,11 @@ The data type handling is the same as describe for the [json-body-transformer](j
 
 ### Callback processing
 
-Internally the callback simulator utilizes Java's `ScheduledExecutorService` with a thread pool size of 50 to perform the callback requests.
+Internally the callback simulator utilizes Java's `ScheduledExecutorService` with thread pool size of 50 to perform the callback requests. The thread pool size can be customized by specifying `SCHEDULED_THREAD_POOL_SIZE` environment variable with the desired size. Note that if the value is less than the default of 50 the default is used.
 Callback requests errors will be logged but note that there is no retry handling in any form. If a callback fails it fails...
+
+### Request identification
+The callback requests emitted by the callback-simulator will contain the `X-Rps-TraceId` header populated with a random value so that services which evaluate this header may add this identifier to their logging context. It is possible to specify a custom value as trace id as shown below in the examples.
 
 ### Stubbing
 Instantiating the WireMock server with `CallbackSimulator` [extension](http://wiremock.org/docs/extending-wiremock/) instance
@@ -107,7 +110,7 @@ Similar in JSON
 
 ```
 
-and in addition with Basic authentication
+and in addition with Basic authentication and custom trace identifier
 
 
 ```java
@@ -118,7 +121,7 @@ int callbackDelay = 10000;
 
 // Note the usage of the com.ninecookies.wiremock.extensions.api.Callbacks class
 wireMockServer.stubFor(post(urlEqualTo("/url/to/post/to"))
-        .withPostServeAction("callback-simulator", Callbacks.of(callbackDelay, callbackUrl, "user", "pass", callbackData))
+        .withPostServeAction("callback-simulator", Callbacks.of(callbackDelay, callbackUrl, "user", "pass", "my-trace-identifier", callbackData))
         .willReturn(aResponse()
                 .withHeader("content-type", "application/json")
                 .withBody("{\"id\":\"$(!UUID)\"}")
@@ -154,6 +157,7 @@ Similar in JSON
                       "username": "user",
                       "password": "pass"
                     },
+                    "traceId": "my-trace-identifier",
                     "data": {
                         "json representation": "of MyCallbackPayload"
                     }

@@ -6,13 +6,16 @@ Important Notes: - none
 
 Version: 0.0.7
 
-Author: - none
+Author: - M.Scheepers
 
 ### Features
-- none
+- added `$(!OffsetDateTime)` keyword with similar semantics as `$(!Instant)` keyword.
 
 ### Improvements
-- none
+- added support for custom `X-Rps-TraceId` header to callback definitions.
+- callback-simulator now persists callback definitions in the file system to reduce memory footprint of scheduled callbacks for load test scenarios to avoid OOM errors.   
+- added ability to configure callback-simulator's thread pool size using `SCHEDULED_THREAD_POOL_SIZE` environment variable so that it doesn't become a bottle neck in load test scenarios.  
+
 
 ### Fixes
 - none
@@ -28,7 +31,7 @@ Author: M.Scheepers
 
 ### Changes
 - introduced a callback simulator post serve action that will perform configurable requests to arbitrary services
-- bumped jackson version to 2.9.9.1 due to  [security issue](https://nvd.nist.gov/vuln/detail/CVE-2019-12814) 
+- bumped jackson version to 2.9.9.1 due to [security issue](https://nvd.nist.gov/vuln/detail/CVE-2019-12814) 
 
 
 ## 2019-03-01 - Enhancement
