@@ -28,6 +28,11 @@ public class Callback {
     public Authentication authentication;
 
     /**
+     * The request id to use for the callback.
+     */
+    public String traceId;
+
+    /**
      * The object representing arbitrary callback data.
      */
     public Object data;
@@ -46,7 +51,7 @@ public class Callback {
 
     /**
      * Creates a new instance for a {@link Callback} definition with Basic authentication.
-     * 
+     *
      * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
      * @param url the destination URL for the callback's POST data.
      * @param username the user name for the callback authentication.
@@ -55,10 +60,26 @@ public class Callback {
      * @return a new {@link Callback} instance ready to use.
      */
     public static Callback of(int delay, String url, String username, String password, Object data) {
+        return of(delay, url, username, password, null, data);
+    }
+
+    /**
+     * Creates a new instance for a {@link Callback} definition with Basic authentication.
+     *
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param url the destination URL for the callback's POST data.
+     * @param username the user name for the callback authentication.
+     * @param password the password for the callback authentication.
+     * @param traceId the trace / request identifier to use for the callback.
+     * @param data the callback data to POST.
+     * @return a new {@link Callback} instance ready to use.
+     */
+    public static Callback of(int delay, String url, String username, String password, String traceId, Object data) {
         Callback result = new Callback();
         result.delay = delay;
         result.url = url;
         result.data = data;
+        result.traceId = traceId;
         if (!Strings.isNullOrEmpty(username) && !Strings.isNullOrEmpty(password)) {
             result.authentication = Authentication.of(username, password);
         }
