@@ -68,8 +68,26 @@ public class CallbackSimulator extends PostServeAction {
     private static int instances = 0;
     private final long instance = ++instances;
 
-    private final ScheduledExecutorService executor = Executors
-            .newScheduledThreadPool(CORE_POOL_SIZE, new DaemonThreadFactory());
+    private final ScheduledExecutorService executor;
+
+    public CallbackSimulator() {
+        int corePoolSize = CORE_POOL_SIZE;
+        try {
+            String poolSizeEnv = System.getenv("SCHEDULED_THREAD_POOL_SIZE");
+            if (poolSizeEnv != null) {
+                corePoolSize = Integer.parseInt(poolSizeEnv);
+                // ensure minimum default thread pool size
+                if (corePoolSize < CORE_POOL_SIZE) {
+                    corePoolSize = CORE_POOL_SIZE;
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("unable to read environment variable SCHEDULED_THREAD_POOL_SIZE", e);
+            corePoolSize = CORE_POOL_SIZE;
+        }
+        LOG.info("instance: {} - using CORE_POOL_SIZE {}", instance, corePoolSize);
+        executor = Executors.newScheduledThreadPool(corePoolSize, new DaemonThreadFactory());
+    }
 
     @Override
     public String getName() {
@@ -93,8 +111,8 @@ public class CallbackSimulator extends PostServeAction {
         for (Callback callback : callbacks.callbacks) {
             Callback normalizedCallback = normalizeCallback(servedJson, callback);
             File callbackDefinition = persistCallback(normalizedCallback);
-            LOG.info("scheduling callback task to: '{}' with delay '{}' and data '{}'",
-                    callback.url, callback.delay, callback.data);
+            LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
+                    instance, callback.url, callback.delay, callback.data);
             executor.schedule(CallbackHandler.of(callbackDefinition), callback.delay, TimeUnit.MILLISECONDS);
         }
     }
