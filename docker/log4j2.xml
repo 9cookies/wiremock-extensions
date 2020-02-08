@@ -5,14 +5,14 @@
     </Properties>
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
+			<!--
 			<PatternLayout pattern="%d{HH:mm:ss,SSS} %-5p [%mdc{RQID}] [%c{1}] %mdc{CTP}%mdc{EIID}%mdc{ESID}%mdc{EOID}%mdc{CID}- %m%n" />
-            <!--
+            -->
 			<LogstashLayout dateTimeFormatPattern="yyyy-MM-dd'T'HH:mm:ss.SSS"
 				eventTemplateUri="classpath:LogstashJsonEventLayoutV1.json"
 				prettyPrintEnabled="false"
 				stackTraceEnabled="true"
 				timeZoneId="UTC" />
-			-->
         </Console>
     </Appenders>
     <Loggers>

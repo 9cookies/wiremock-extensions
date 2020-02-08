@@ -15,7 +15,7 @@ Author: - M.Scheepers
 - added support for custom `X-Rps-TraceId` header to callback definitions.
 - callback-simulator now persists callback definitions in the file system to reduce memory footprint of scheduled callbacks for load test scenarios to avoid OOM errors.   
 - added ability to configure callback-simulator's thread pool size using `SCHEDULED_THREAD_POOL_SIZE` environment variable so that it doesn't become a bottle neck in load test scenarios.  
-
+- Wire mock server in the generated docker image uses `LogstashLayout` to print JSON logs.
 
 ### Fixes
 - none
