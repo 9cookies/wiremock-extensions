@@ -2,7 +2,7 @@
 
 It provides [WireMock](http://wiremock.org/) extensions for a dynamic mocking of JSON responses that are built on the [extension support](http://wiremock.org/docs/extending-wiremock/) provided by [WireMock](http://wiremock.org/).
 
-The project is based on Java 8, uses Maven as build tool and provides extensions for WireMock 2.5.0+.
+The project is based on Java 8, uses Maven as build tool and provides extensions for WireMock 2.22.0+.
 
 ## Prerequisites
 - JDK 8
@@ -60,34 +60,13 @@ Add the following dependency to your projects `pom.xml` file.
 <dependency>
 	<groupId>com.ninecookies.wiremock.extensions</groupId>
 	<artifactId>wiremock-extensions</artifactId>
-	<version>0.0.6</version>
+	<version>0.0.7</version>
 </dependency>
 ```
 
 ### Maven plug-in usage
 
-See [WireMock Maven Plugin](https://github.com/automatictester/wiremock-maven-plugin#wiremock-maven-plugin) for details about the latest version. 
-
-```XML
-<pluginRepositories>
-    <pluginRepository>
-        <id>9c-snapshots</id>
-        <url>https://raw.github.com/9cookies/mvn-repo/master/snapshots/</url>
-        <snapshots>
-            <enabled>true</enabled>
-            <updatePolicy>always</updatePolicy>
-        </snapshots>
-    </pluginRepository>
-    <pluginRepository>
-        <id>9c-releases</id>
-        <url>https://raw.github.com/9cookies/mvn-repo/master/releases/</url>
-        <releases>
-            <enabled>true</enabled>
-            <updatePolicy>always</updatePolicy>
-        </releases>
-    </pluginRepository>
-</pluginRepositories>
-```
+See [WireMock Maven Plugin](https://github.com/automatictester/wiremock-maven-plugin#wiremock-maven-plugin) for details about the latest version. Add the repository definition as described above.  
 
 ```XML
 <plugin>
@@ -107,7 +86,7 @@ See [WireMock Maven Plugin](https://github.com/automatictester/wiremock-maven-pl
 				<goal>run</goal>
 			</goals>
 			<configuration>
-				<params>--extensions com.ninecookies.wiremock.extensions.JsonBodyTransformer</params>
+				<params>--extensions com.ninecookies.wiremock.extensions.JsonBodyTransformer, com.ninecookies.wiremock.extensions.CallbackSimulator</params>
 			</configuration>
 		</execution>
 	</executions>
