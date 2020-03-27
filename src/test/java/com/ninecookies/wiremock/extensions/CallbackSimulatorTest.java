@@ -7,8 +7,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.resetAllRequests;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.jayway.restassured.RestAssured.given;
 import static com.ninecookies.wiremock.extensions.util.Maps.entry;
 import static com.ninecookies.wiremock.extensions.util.Maps.mapOf;
@@ -18,20 +20,16 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.BasicCredentials;
 import com.github.tomakehurst.wiremock.common.Json;
-import com.jayway.restassured.RestAssured;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.api.Callbacks;
 
-public class CallbackSimulatorTest {
+public class CallbackSimulatorTest extends AbstractExtensionTest {
 
     private static final class CallbackData {
         @SuppressWarnings("unused")
@@ -51,36 +49,15 @@ public class CallbackSimulatorTest {
     private static final int DELAY = 100;
     private static final int SLEEP = 500;
     private static final int SERVER_PORT = 9090;
-    private WireMockServer wireMockServer;
-
-    @BeforeClass
-    public void beforeClass() {
-        System.out.println("beforeClass()");
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
-        System.setProperty("org.slf4j.simpleLogger.log.com.ninecookies.wiremock.extensions", "debug");
-
-        wireMockServer = new WireMockServer(wireMockConfig()
-                .port(SERVER_PORT)
-                .extensions(new CallbackSimulator(), new JsonBodyTransformer()));
-        wireMockServer.start();
-
-        RestAssured.port = SERVER_PORT;
-    }
-
-    @AfterClass(alwaysRun = true)
-    public void afterClass() {
-        wireMockServer.stop();
-        System.out.println("afterClass()");
-    }
-
-    @BeforeMethod
-    public void beforeMethod() {
-        wireMockServer.resetRequests();
-    }
 
     private static final String CALLBACK_POST_DATA_FORMAT = "{\"code\":\"%s\"}";
     private static final String EXPECTED_CALLBACK_JSON_FORMAT = "{\"response_id\":\"%s\",\"request_code\":\"%s\"," +
             "\"url_parts_1\":\"callback\",\"defined_value\":\"from-mapping-file\"}";
+
+    @BeforeMethod
+    public void beforeMethod() {
+        resetAllRequests();
+    }
 
     @Test
     public void testAuthenticatedCallbackWithMapping() throws InterruptedException {
@@ -94,7 +71,7 @@ public class CallbackSimulatorTest {
         String id = Json.node(responseJson).get("id").textValue();
         String json = String.format(EXPECTED_CALLBACK_JSON_FORMAT, id, code);
         sleep();
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks"))
+        verify(1, postRequestedFor(urlEqualTo("/callbacks"))
                 .withBasicAuth(new BasicCredentials("user", "pass"))
                 .withRequestBody(equalToJson(json)));
     }
@@ -111,7 +88,7 @@ public class CallbackSimulatorTest {
         String id = Json.node(responseJson).get("id").textValue();
         String json = String.format(EXPECTED_CALLBACK_JSON_FORMAT, id, code);
         sleep();
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks"))
+        verify(1, postRequestedFor(urlEqualTo("/callbacks"))
                 .withoutHeader("Authorization")
                 .withRequestBody(equalToJson(json)));
     }
@@ -129,7 +106,7 @@ public class CallbackSimulatorTest {
         String callbackUrl = "$(request.callbacks.order_dispatched)";
         CallbackData callbackData = CallbackData.of("aritrary-data");
 
-        wireMockServer.stubFor(post(urlEqualTo(requestUrl))
+        stubFor(post(urlEqualTo(requestUrl))
                 .withPostServeAction("callback-simulator", Callbacks.of(DELAY, callbackUrl, callbackData))
                 .willReturn(aResponse()
                         .withHeader("content-type", "application/json")
@@ -137,7 +114,7 @@ public class CallbackSimulatorTest {
                         .withTransformers("json-body-transformer")
                         .withStatus(201)));
 
-        wireMockServer.stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+        stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
 
         String responseJson = given().body(requestBody).contentType("application/json")
                 .when().post(requestUrl)
@@ -146,7 +123,7 @@ public class CallbackSimulatorTest {
 
         String id = Json.node(responseJson).get("id").textValue();
         sleep();
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData.timestamp + "')]")));
@@ -160,7 +137,7 @@ public class CallbackSimulatorTest {
         String postData = "{\"name\":\"test\"}";
         String responseData = "{\"id\":\"$(!UUID)\",\"name\":\"$(name)\",\"port\":" + SERVER_PORT + "}";
 
-        wireMockServer.stubFor(post(urlEqualTo(postUrl))
+        stubFor(post(urlEqualTo(postUrl))
                 .withPostServeAction("callback-simulator",
                         Callbacks.of(DELAY, callbackUrl, CallbackData.of("arbitrary-data")))
                 .willReturn(aResponse()
@@ -174,7 +151,7 @@ public class CallbackSimulatorTest {
                 .then().statusCode(200);
 
         sleep();
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks")));
+        verify(1, postRequestedFor(urlEqualTo("/callbacks")));
     }
 
     @Test
@@ -192,7 +169,7 @@ public class CallbackSimulatorTest {
                 Callback.of(100, callbackUrl, callbackData1),
                 Callback.of(500, callbackUrl, callbackData2));
 
-        wireMockServer.stubFor(post(urlEqualTo(requestUrl))
+        stubFor(post(urlEqualTo(requestUrl))
                 .withPostServeAction("callback-simulator", arguments)
                 .willReturn(aResponse()
                         .withHeader("content-type", "application/json")
@@ -200,7 +177,7 @@ public class CallbackSimulatorTest {
                         .withTransformers("json-body-transformer")
                         .withStatus(201)));
 
-        wireMockServer.stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+        stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
 
         String responseJson = given().body(requestBody).contentType("application/json")
                 .when().post(requestUrl)
@@ -209,13 +186,13 @@ public class CallbackSimulatorTest {
 
         String id = Json.node(responseJson).get("id").textValue();
         Thread.sleep(250);
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData1.value + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData1.timestamp + "')]")));
 
         Thread.sleep(450);
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData2.value + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData2.timestamp + "')]")));
@@ -238,7 +215,7 @@ public class CallbackSimulatorTest {
 
         sleep();
 
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/callbacks"))
+        verify(1, postRequestedFor(urlEqualTo("/callbacks"))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.datetime == '" + datetime + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.random)]"))
@@ -253,7 +230,7 @@ public class CallbackSimulatorTest {
 
         String callbackPath = "/get/callbacks";
         String callbackUrl = "http://localhost:" + SERVER_PORT + callbackPath;
-        wireMockServer.stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+        stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", "$(response.id)");
@@ -264,7 +241,7 @@ public class CallbackSimulatorTest {
 
         String getUrl = "/get/with/callback";
         String responseData = "{\"id\":\"$(!UUID)\", \"name\":\"response-name\"}";
-        wireMockServer.stubFor(get(getUrl)
+        stubFor(get(getUrl)
                 .withPostServeAction("callback-simulator", callbacks)
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("content-type", "application/json")
@@ -279,7 +256,7 @@ public class CallbackSimulatorTest {
         String name = response.get("name").textValue();
         sleep();
 
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.event == 'callback-defined-event')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.name == '" + name + "')]"))
@@ -291,7 +268,7 @@ public class CallbackSimulatorTest {
 
         String callbackPath = "/get/callbacks";
         String callbackUrl = "http://localhost:" + SERVER_PORT + callbackPath;
-        wireMockServer.stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+        stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", "$(response.id)");
@@ -303,7 +280,7 @@ public class CallbackSimulatorTest {
 
         String getUrl = "/get/with/callback/path/part";
         String responseData = "{\"id\":\"$(!UUID)\", \"name\":\"response-name\"}";
-        wireMockServer.stubFor(get(getUrl)
+        stubFor(get(getUrl)
                 .withPostServeAction("callback-simulator", callbacks)
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("content-type", "application/json")
@@ -318,7 +295,7 @@ public class CallbackSimulatorTest {
         String name = response.get("name").textValue();
         sleep();
 
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.event == 'callback-defined-event')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.name == '" + name + "')]"))
@@ -341,7 +318,7 @@ public class CallbackSimulatorTest {
 
         String getUrl = "/get/with/erroneous/callback";
         String responseData = "{\"id\":\"$(!UUID)\", \"name\":\"response-name\"}";
-        wireMockServer.stubFor(get(getUrl)
+        stubFor(get(getUrl)
                 .withPostServeAction("callback-simulator", callbacks)
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("content-type", "application/json")
@@ -352,7 +329,7 @@ public class CallbackSimulatorTest {
                 .get(getUrl).then().statusCode(200).extract().asString();
 
         sleep();
-        wireMockServer.verify(0, postRequestedFor(urlEqualTo("/arbitrary/url")));
+        verify(0, postRequestedFor(urlEqualTo("/arbitrary/url")));
     }
 
     @Test
@@ -370,7 +347,7 @@ public class CallbackSimulatorTest {
 
         String getUrl = "/get/with/erroneous/callback";
         String responseData = "{\"id\":\"$(!UUID)\", \"name\":\"response-name\"}";
-        wireMockServer.stubFor(get(getUrl)
+        stubFor(get(getUrl)
                 .withPostServeAction("callback-simulator", callbacks)
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("content-type", "application/json")
@@ -381,7 +358,7 @@ public class CallbackSimulatorTest {
                 .get(getUrl).then().statusCode(200).extract().asString();
 
         sleep();
-        wireMockServer.verify(0, postRequestedFor(urlEqualTo("/arbitrary/url")));
+        verify(0, postRequestedFor(urlEqualTo("/arbitrary/url")));
     }
 
     @Test
@@ -400,7 +377,7 @@ public class CallbackSimulatorTest {
         Callback callback = Callback.of(DELAY, callbackUrl, callbackData);
         callback.traceId = "my-fancy-trace-id";
 
-        wireMockServer.stubFor(post(urlEqualTo(requestUrl))
+        stubFor(post(urlEqualTo(requestUrl))
                 .withPostServeAction("callback-simulator", Callbacks.of(callback))
                 .willReturn(aResponse()
                         .withHeader("content-type", "application/json")
@@ -408,7 +385,7 @@ public class CallbackSimulatorTest {
                         .withTransformers("json-body-transformer")
                         .withStatus(201)));
 
-        wireMockServer.stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+        stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
 
         String responseJson = given().body(requestBody).contentType("application/json")
                 .when().post(requestUrl)
@@ -417,7 +394,7 @@ public class CallbackSimulatorTest {
 
         String id = Json.node(responseJson).get("id").textValue();
         sleep();
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo(callbackPath))
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
                 .withHeader("X-Rps-TraceId", equalTo("my-fancy-trace-id"))
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))

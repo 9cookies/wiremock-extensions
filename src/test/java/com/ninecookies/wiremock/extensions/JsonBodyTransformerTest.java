@@ -5,8 +5,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.resetAllRequests;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.jayway.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.equalTo;
@@ -21,21 +23,16 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.module.jsv.JsonSchemaValidator;
 import com.jayway.restassured.response.ExtractableResponse;
 import com.jayway.restassured.response.Response;
 import com.jayway.restassured.response.ValidatableResponse;
 
-public class JsonBodyTransformerTest {
-    private static final int SERVER_PORT = 9090;
+public class JsonBodyTransformerTest extends AbstractExtensionTest {
 
     private static final String REQUEST_URL = "/post/it";
     private static final String BODY_TRANSFORMER = "json-body-transformer";
@@ -57,27 +54,9 @@ public class JsonBodyTransformerTest {
     private static final String TIMESTAMP_RESPONSE_SCHEMA = "{\"$schema\": \"http://json-schema.org/draft-03/schema#\","
             + "\"type\":\"object\",\"properties\":{\"timestamp\":{\"type\":\"number\",\"required\":true}}}";
 
-    private WireMockServer wireMockServer;
-
-    @BeforeClass
-    public void beforeClass() {
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
-        System.setProperty("org.slf4j.simpleLogger.log.com.ninecookies.wiremock.extensions", "debug");
-
-        wireMockServer = new WireMockServer(wireMockConfig().port(SERVER_PORT).extensions(new JsonBodyTransformer()));
-        wireMockServer.start();
-
-        RestAssured.port = SERVER_PORT;
-    }
-
-    @AfterClass(alwaysRun = true)
-    public void afterClass() {
-        wireMockServer.stop();
-    }
-
     @BeforeMethod
     public void beforeMethod() {
-        wireMockServer.resetRequests();
+        resetAllRequests();
     }
 
     @Test
@@ -86,7 +65,7 @@ public class JsonBodyTransformerTest {
         String requestBody = "{\"list\": [{\"item\":\"item-0\"},{\"item\":\"item-1\"}]}";
         String responseBody = "{\"list\": \"$(list)\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(url);
@@ -103,7 +82,7 @@ public class JsonBodyTransformerTest {
                 + "\"datetime\": \"$(datetime)\", \"nulldatetime\": \"$(nulldatetime)\", "
                 + "\"number\": \"$(number)\", \"nullnumber\": \"$(nullnumber)\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(REQUEST_BODY).when().post(url);
@@ -113,7 +92,7 @@ public class JsonBodyTransformerTest {
                 .body("datetime", equalTo("2016-09-26T14:30:22.447Z")).body("nulldatetime", equalTo(null))
                 .body("number", equalTo(12345)).body("nullnumber", equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -126,7 +105,7 @@ public class JsonBodyTransformerTest {
                 + "\"number\": \"$(number)\", \"nullnumber\": \"$(nullnumber)\", "
                 + "\"path_part\": \"$(urlParts[1])\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(REQUEST_BODY).when().post(url);
@@ -137,7 +116,7 @@ public class JsonBodyTransformerTest {
                 .body("number", equalTo(12345)).body("nullnumber", equalTo(null))
                 .body("path_part", equalTo("response"));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -151,7 +130,7 @@ public class JsonBodyTransformerTest {
                 .body("datetime", equalTo("2016-09-26T14:30:22.447Z")).body("nulldatetime", equalTo(null))
                 .body("number", equalTo(12345)).body("nullnumber", equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -165,7 +144,7 @@ public class JsonBodyTransformerTest {
                 .body("datetime", equalTo("2016-09-26T14:30:22.447Z")).body("nulldatetime", equalTo(null))
                 .body("number", equalTo(12345)).body("nullnumber", equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -177,7 +156,7 @@ public class JsonBodyTransformerTest {
                 + "\"datetime\": \"$(datetime)\", \"nulldatetime\": \"$(nulldatetime)\", "
                 + "\"number\": \"$(number)\", \"nullnumber\": \"$(nullnumber)\"} }";
 
-        wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(REQUEST_BODY).when().post(url);
@@ -187,7 +166,7 @@ public class JsonBodyTransformerTest {
                 .body("nested.datetime", equalTo("2016-09-26T14:30:22.447Z")).body("nested.nulldatetime", equalTo(null))
                 .body("nested.number", equalTo(12345)).body("nested.nullnumber", equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -201,7 +180,7 @@ public class JsonBodyTransformerTest {
                 .body("nested.datetime", equalTo("2016-09-26T14:30:22.447Z")).body("nested.nulldatetime", equalTo(null))
                 .body("nested.number", equalTo(12345)).body("nested.nullnumber", equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -215,7 +194,7 @@ public class JsonBodyTransformerTest {
                 .body("nested.datetime", equalTo("2016-09-26T14:30:22.447Z")).body("nested.nulldatetime", equalTo(null))
                 .body("nested.number", equalTo(12345)).body("nested.nullnumber", equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -223,7 +202,7 @@ public class JsonBodyTransformerTest {
         String url = "/stub/complex/response";
 
         String responseBody = "{ \"complex\": \"$(complex)\"} }";
-        wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(COMPLEX_REQUEST_BODY).when().post(url);
@@ -231,7 +210,7 @@ public class JsonBodyTransformerTest {
         response.then().statusCode(201).body("complex.string", equalTo("value")).body("complex.boolean", equalTo(true))
                 .body("complex.datetime", equalTo("2016-09-26T14:30:22.447Z")).body("complex.number", equalTo(12345));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -239,7 +218,7 @@ public class JsonBodyTransformerTest {
         String url = "/stub/more/complex/response";
 
         String responseBody = "{ \"complex\": \"$(complex)\" }";
-        wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(MORE_COMPLEX_REQUEST_BODY).when().post(url);
@@ -249,7 +228,7 @@ public class JsonBodyTransformerTest {
                 .body("complex.more.string", equalTo("value")).body("complex.more.boolean", equalTo(true))
                 .body("complex.more.number", equalTo(12345));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -262,7 +241,7 @@ public class JsonBodyTransformerTest {
                 .body("complex.nullboolean", equalTo(null))
                 .body("complex.datetime", equalTo("2016-09-26T14:30:22.447Z")).body("complex.number", equalTo(12345));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -275,7 +254,7 @@ public class JsonBodyTransformerTest {
                 .body("complex.nullboolean", equalTo(null))
                 .body("complex.datetime", equalTo("2016-09-26T14:30:22.447Z")).body("complex.number", equalTo(12345));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
@@ -284,40 +263,40 @@ public class JsonBodyTransformerTest {
 
         String responseBody = "{ \"string\": \"$(string)\",  \"data\": { \"name\": \"$(data.name)\" } }";
 
-        wireMockServer.stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(201)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(REQUEST_BODY).when().post(url);
 
         response.then().statusCode(201).body("string", equalTo("value")).body("data.name", equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(url)));
+        verify(postRequestedFor(urlEqualTo(url)));
     }
 
     @Test
     public void replaceVariableHolder() throws Exception {
         String requestBody = "{\"name\":\"John Doe\", \"age\": 35}";
         String responseBody = "{\"name\":\"$(name)\", \"age\": \"$(age)\", \"got\":\"it\"}";
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
                 .body("name", equalTo("John Doe"))
                 .body("age", equalTo(35))
                 .body("got", equalTo("it"));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo("/post/it")));
+        verify(postRequestedFor(urlEqualTo("/post/it")));
     }
 
     @Test
     public void useTransformerWithoutReplacementPatterns() {
         String requestBody = "{\"name\":\"John Doe\"}";
         String responseBody = "{\"name\":\"Jane Doe\", \"got\":\"it\"}";
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
                 .body("name", equalTo("Jane Doe")).body("got", equalTo("it"));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -325,13 +304,13 @@ public class JsonBodyTransformerTest {
         String requestBody = "{\"name\":\"John Doe\", \"nested\": {\"attr\": \"found\"}}}";
         String responseBody = "{\"name\":\"$(name)\", \"got\":\"it\", \"nested_attr\": \"$(nested.attr)\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
 
         response.then().statusCode(200).body("name", equalTo("John Doe")).body("got", equalTo("it")).body("nested_attr",
                 equalTo("found"));
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -339,13 +318,13 @@ public class JsonBodyTransformerTest {
         String requestBody = "{\"something\":\"different\"}";
         String responseBody = "{\"name\":\"$(name)\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200).body("name",
                 equalTo(null));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -353,14 +332,14 @@ public class JsonBodyTransformerTest {
         String requestBody = "{\"name\":\"John Doe\"}";
         String responseBody = "{\"message\":\"Hello $(name), how are you?\", \"name\":\"$(name)\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
                 .body("message", equalTo("Hello John Doe, how are you?"))
                 .body("name", equalTo("John Doe"));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -368,13 +347,13 @@ public class JsonBodyTransformerTest {
         String requestBody = "{\"name\":\"John Doe\"}";
         String responseBody = "{\"message\":\"Hello $(name), how are you?\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
                 .body("message", equalTo("Hello John Doe, how are you?"));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -382,13 +361,13 @@ public class JsonBodyTransformerTest {
         String requestBody = "{\"name\":\"John Doe\"}";
         String responseBody = "{\"message\":\"Hello $(unknown), how are you?\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
                 .body("message", equalTo("Hello null, how are you?"));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -396,7 +375,7 @@ public class JsonBodyTransformerTest {
         String requestBody = "{\"name\":\"John Doe\"}";
         String responseBody = "{\"message\":\"Hello $(name), you are the $(!Random) user.\"}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         String message = given().contentType(CONTENT_TYPE).body(requestBody)
@@ -404,7 +383,7 @@ public class JsonBodyTransformerTest {
                 .then().statusCode(200).extract().path("message");
         assertTrue(message.matches("Hello John Doe, you are the [\\-0-9]* user\\."));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
 
     }
 
@@ -412,13 +391,13 @@ public class JsonBodyTransformerTest {
     public void doesNotApplyGlobally() throws Exception {
         String requestBody = "{\"name\":\"John Doe\"}";
         String responseBody = "{\"name\":\"$(name)\"}";
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(
                 aResponse().withStatus(200).withHeader("content-type", CONTENT_TYPE).withBody(responseBody)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL).then().statusCode(200)
                 .body(equalTo(responseBody));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @DataProvider
@@ -433,7 +412,7 @@ public class JsonBodyTransformerTest {
 
     @Test(dataProvider = "randomFormats")
     public void injectRandom(String format) {
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL))
+        stubFor(post(urlEqualTo(REQUEST_URL))
                 .willReturn(aResponse().withStatus(200).withHeader("content-type", CONTENT_TYPE)
                         .withBody("{\"randomNumber\":\"" + format + "\", \"got\":\"it\"}")
                         .withTransformers(BODY_TRANSFORMER)));
@@ -441,7 +420,7 @@ public class JsonBodyTransformerTest {
         given().contentType(CONTENT_TYPE).body("{\"var\":1111}").when().post(REQUEST_URL).then().statusCode(200)
                 .body("randomNumber", isA(Integer.class)).body("got", equalTo("it"));
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -449,7 +428,7 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"id\": \"$(!Random.id)\", \"self\": \"$(!Random.id)\", \"other\": \"$(!Random)\"}";
         String requestBody = "{}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
@@ -465,7 +444,7 @@ public class JsonBodyTransformerTest {
         assertEquals(id, self);
         assertNotEquals(id, other);
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @DataProvider
@@ -483,7 +462,7 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"id\": \"" + format + "\"}";
         String requestBody = "{}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
@@ -495,7 +474,7 @@ public class JsonBodyTransformerTest {
             fail(e.getMessage());
         }
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -503,7 +482,7 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"id\": \"$(!UUID.id)\", \"self\": \"$(!UUID.id)\", \"other\": \"$(!UUID)\"}";
         String requestBody = "{}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
@@ -526,7 +505,7 @@ public class JsonBodyTransformerTest {
             fail(e.getMessage());
         }
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -534,7 +513,7 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"instant\":\"$(!Instant)\"}";
         String requestBody = "{}";
         Instant expectedInstant = Instant.now();
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
         Instant instant = Instant.parse(response.then().statusCode(200)
@@ -542,7 +521,7 @@ public class JsonBodyTransformerTest {
                 .and().body("instant", isA(String.class)).extract().path("instant"));
         assertEquals(Duration.between(instant, expectedInstant).plus(Duration.ofMillis(999)).getSeconds(), 0);
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -550,7 +529,7 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"timestamp\":\"$(!Timestamp)\"}";
         String requestBody = "{}";
         Instant expectedInstant = Instant.now();
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
         Instant instant = Instant.ofEpochMilli(response.then().statusCode(200)
@@ -559,7 +538,7 @@ public class JsonBodyTransformerTest {
 
         assertEquals(Duration.between(instant, expectedInstant).plus(Duration.ofMillis(999)).getSeconds(), 0);
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @DataProvider
@@ -643,7 +622,7 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"" + field + "\":\"$(!" + format + ".plus[" + unitAmount + "])\"}";
         String requestBody = "{}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
@@ -657,7 +636,7 @@ public class JsonBodyTransformerTest {
 
         assertEquals(Duration.between(actualInstant, expectedInstant).plus(Duration.ofMillis(999)).getSeconds(), 0);
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -665,13 +644,13 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"instant\":\"$(!Instant.plus[a1])\"}";
         String requestBody = "{}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL)
                 .then().statusCode(500);
 
-        wireMockServer.verify(0, postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(0, postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -679,26 +658,26 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"timestamp\":\"$(!Timestamp.plus[a1])\"}";
         String requestBody = "{}";
 
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL)
                 .then().statusCode(500);
 
-        wireMockServer.verify(0, postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(0, postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
     public void transformNonJsonContent() {
         String responseBody = "<html><head><title>empty page</title><body>empty</body></html>";
         String requestBody = "{}";
-        wireMockServer.stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", "text/html").withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL)
                 .then().statusCode(200).extract().asString().equals(responseBody);
 
-        wireMockServer.verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
@@ -706,7 +685,7 @@ public class JsonBodyTransformerTest {
         String responseBody = "{\"id\": \"$(!UUID.id)\", \"self\": \"$(!UUID.id)\", \"other\": \"$(!UUID)\","
                 + " \"pattern\": \"$(unavailable)\"}";
 
-        wireMockServer.stubFor(get(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(get(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         Response response = given().when().get(REQUEST_URL);
@@ -730,19 +709,19 @@ public class JsonBodyTransformerTest {
         } catch (IllegalArgumentException e) {
             fail(e.getMessage());
         }
-        wireMockServer.verify(getRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(getRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
     @Test
     public void transformGetRequestMissingResponseContentType() {
         String responseBody = "{\"id\": \"$(!UUID.id)\", \"self\": \"$(!UUID.id)\", \"other\": \"$(!UUID)\"}";
 
-        wireMockServer.stubFor(get(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+        stubFor(get(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
                 .withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
 
         given().when().get(REQUEST_URL).then().statusCode(200).extract().asString().equals(responseBody);
 
-        wireMockServer.verify(getRequestedFor(urlEqualTo(REQUEST_URL)));
+        verify(getRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
 }
