@@ -9,3 +9,4 @@
 - [x] add support for authenticated callbacks
 - [x] add callback simulator post serve action documentation
 - [x] revise/reuse existing documentation (WRT featured keywords)
+- [ ] add documentation regarding docker usage

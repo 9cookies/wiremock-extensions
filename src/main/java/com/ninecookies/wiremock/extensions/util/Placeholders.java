@@ -28,8 +28,8 @@ import com.github.tomakehurst.wiremock.common.Json;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Configuration.ConfigurationBuilder;
 import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.internal.JsonContext;
 
 /**
  * Provides convenient methods to parse, populate and replace placeholders in JSON strings.
@@ -75,10 +75,9 @@ public class Placeholders {
      *         {@code null} or empty ({@code ""}).
      */
     public static DocumentContext documentContextOf(String json) {
-        JsonContext result = null;
+        DocumentContext result = null;
         if (json != null && json.trim().length() > 0) { // ? PARSE_CONTEXT.parse(json) : null;
-            result = new JsonContext(JSON_CONTEXT_CONFIGURATION_BUILDER.build());
-            result.parse(json);
+            result = JsonPath.parse(json, JSON_CONTEXT_CONFIGURATION_BUILDER.build());
         }
         LOG.debug("documentContextOf('{}') -> '{}'", json, describe(result));
         return result;
