@@ -29,6 +29,10 @@ You can find further information in the [documentation](json-body-transformer.md
 It implements WireMock's `PostServeAction` and is an extension that is able to emit POST requests to arbitrary URLs. It allows your WireMock callback to be dynamically depending on the JSON request and response bodies of the related request.
 You can find further information in the [documentation](callback-simulator.md).
 
-### Usage
+## The Request Time Matcher
+It implements Wiremock's `RequestMatcher` and is an extension that is able to match a RegEx pattern against the time of the request in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) format as UTC.
+You can find further information in the [documentation](request-time-matcher.md).
+
+## Usage
 This extension is not hosted on Maven central but on github. 
 You can find further usage information [documentation](usage.md).
