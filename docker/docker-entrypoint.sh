@@ -16,7 +16,7 @@ if [ "${1:0:1}" = "-" ]; then
 	set -- java -Dlog4j.configurationFile="/var/wiremock/lib/log4j2.xml" \
 	-cp /var/wiremock/lib/*:/var/wiremock/extensions/* \
 	com.github.tomakehurst.wiremock.standalone.WireMockServerRunner \
-	--extensions com.ninecookies.wiremock.extensions.JsonBodyTransformer,com.ninecookies.wiremock.extensions.CallbackSimulator \
+	--extensions com.ninecookies.wiremock.extensions.JsonBodyTransformer,com.ninecookies.wiremock.extensions.CallbackSimulator,com.ninecookies.wiremock.extensions.RequestTimeMatcher \
 	"$@"
 fi
 
