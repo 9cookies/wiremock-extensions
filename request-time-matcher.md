@@ -6,7 +6,7 @@ The `request-time-matcher` extension provides the ability to match the time of t
 
 This comes in handy to simulate e.g. short down times / outages of services during load tests.
 
-Imagine a JSON mapping that service a callback URL which only ever returns 204
+Imagine a JSON mapping that serves a callback URL which only ever returns 204
 
 ```java
 stubFor(post(urlEqualTo("3rd/party/url")).willReturn(aResponse().withStatus(204);
