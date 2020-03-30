@@ -68,4 +68,42 @@ public class RequestTimeMatcherTest extends AbstractExtensionTest {
                 .willReturn(aResponse().withStatus(200)));
         when().get(URL).then().statusCode(400);
     }
+
+    @Test
+    public void testRequestTimeMatcherEmptyParamsDoesNotMatch() {
+        stubFor(any(urlEqualTo(URL))
+                .atPriority(3)
+                .andMatching("request-time-matcher", Parameters.empty())
+                .willReturn(aResponse().withStatus(200)));
+        when().get(URL).then().statusCode(400);
+    }
+
+    @Test
+    public void testRequestTimeMatcherEmptyValueDoesNotMatch() {
+        stubFor(any(urlEqualTo(URL))
+                .atPriority(3)
+                .andMatching("request-time-matcher", Parameters.one("pattern", ""))
+                .willReturn(aResponse().withStatus(200)));
+        when().get(URL).then().statusCode(400);
+    }
+
+    @Test
+    public void testRequestTimeMatcherNullValueDoesNotMatch() {
+        Parameters parameters = new Parameters();
+        parameters.put("pattern", null);
+        stubFor(any(urlEqualTo(URL))
+                .atPriority(3)
+                .andMatching("request-time-matcher", parameters)
+                .willReturn(aResponse().withStatus(200)));
+        when().get(URL).then().statusCode(400);
+    }
+
+    @Test
+    public void testRequestTimeMatcherArbitraryValueDoesNotMatch() {
+        stubFor(any(urlEqualTo(URL))
+                .atPriority(3)
+                .andMatching("request-time-matcher", Parameters.one("pattern", "does-not-match"))
+                .willReturn(aResponse().withStatus(200)));
+        when().get(URL).then().statusCode(400);
+    }
 }

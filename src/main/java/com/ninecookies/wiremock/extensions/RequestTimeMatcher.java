@@ -25,6 +25,9 @@ public class RequestTimeMatcher extends RequestMatcherExtension {
 
     @Override
     public MatchResult match(Request request, Parameters parameters) {
+        if (!parameters.containsKey("pattern")) {
+            return MatchResult.of(false);
+        }
         String pattern = parameters.getString("pattern");
         if (Strings.isNullOrEmpty(pattern)) {
             return MatchResult.of(false);
