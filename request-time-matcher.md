@@ -24,7 +24,7 @@ Similar in JSON
 }
 ```
 
-If requests to that very URL should fail for a certain amount of time during a load test to see how the calling service behaves and potentially recovers in such situations this matcher can be used provide an additional stubbing to serve a different response for the same URL at a higher priority as the default (5 - see [stubbing](http://wiremock.org/docs/stubbing/)) as shown in the example below where the HTTP Status 500 will be returned for 10 minutes between 10 and 19:59:59 every hour.
+If requests to that very URL should fail for a certain amount of time during a load test to see how the calling service behaves and potentially recovers in such situations, this matcher can be used provide an additional stubbing to serve a different response for the same URL at a higher priority as the default (5 - see [stubbing](http://wiremock.org/docs/stubbing/)) as shown in the example below where the HTTP Status 500 will be returned for 10 minutes between 10 and 19:59:59 every hour.
 
 ```java
 stubFor(post(urlEqualTo("3rd/party/url")).atPriority(3)
