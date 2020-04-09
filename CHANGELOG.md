@@ -12,7 +12,7 @@ Author: - none
 - none
 
 ### Improvements
-- Introduced retry handling to the `CallbackSimulator`
+- none
 
 ### Fixes
 - none
