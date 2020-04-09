@@ -65,28 +65,39 @@ public class CallbackSimulator extends PostServeAction {
 
     private static final Logger LOG = LoggerFactory.getLogger(CallbackSimulator.class);
     private static final int CORE_POOL_SIZE = 50;
+    private static final int DEFAULT_RETRY_BACKOFF = 5_000;
+    private static final int DEFAULT_MAX_RETRIES = 0;
     private static int instances = 0;
     private final long instance = ++instances;
+    private final int retryBackoff;
+    private final int maxRetries;
 
     private final ScheduledExecutorService executor;
 
     public CallbackSimulator() {
-        int corePoolSize = CORE_POOL_SIZE;
-        try {
-            String poolSizeEnv = System.getenv("SCHEDULED_THREAD_POOL_SIZE");
-            if (poolSizeEnv != null) {
-                corePoolSize = Integer.parseInt(poolSizeEnv);
-                // ensure minimum default thread pool size
-                if (corePoolSize < CORE_POOL_SIZE) {
-                    corePoolSize = CORE_POOL_SIZE;
-                }
-            }
-        } catch (Exception e) {
-            LOG.error("unable to read environment variable SCHEDULED_THREAD_POOL_SIZE", e);
+        int corePoolSize = parseEnvironmentSetting("SCHEDULED_THREAD_POOL_SIZE", CORE_POOL_SIZE);
+        // ensure minimum default thread pool size
+        if (corePoolSize < CORE_POOL_SIZE) {
             corePoolSize = CORE_POOL_SIZE;
         }
-        LOG.info("instance: {} - using CORE_POOL_SIZE {}", instance, corePoolSize);
+        retryBackoff = parseEnvironmentSetting("RETRY_BACKOFF", DEFAULT_RETRY_BACKOFF);
+        maxRetries = parseEnvironmentSetting("MAX_RETRIES", DEFAULT_MAX_RETRIES);
+        LOG.info("instance: {} - using SCHEDULED_THREAD_POOL_SIZE {} - RETRY_BACKOFF {} - MAX_RETRIES {}",
+                instance, corePoolSize, retryBackoff, maxRetries);
         executor = Executors.newScheduledThreadPool(corePoolSize, new DaemonThreadFactory());
+    }
+
+    private int parseEnvironmentSetting(String name, int defaultValue) {
+        int result = defaultValue;
+        try {
+            String poolSizeEnv = System.getenv(name);
+            if (poolSizeEnv != null) {
+                result = Integer.parseInt(poolSizeEnv);
+            }
+        } catch (Exception e) {
+            LOG.error("unable to read environment variable '{}'", name, e);
+        }
+        return result;
     }
 
     @Override
@@ -113,7 +124,8 @@ public class CallbackSimulator extends PostServeAction {
             File callbackDefinition = persistCallback(normalizedCallback);
             LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
                     instance, callback.url, callback.delay, callback.data);
-            executor.schedule(CallbackHandler.of(callbackDefinition), callback.delay, TimeUnit.MILLISECONDS);
+            Runnable callbackHandler = CallbackHandler.of(executor, maxRetries, retryBackoff, callbackDefinition);
+            executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -200,13 +212,17 @@ public class CallbackSimulator extends PostServeAction {
                 .setConnectionRequestTimeout(5_000)
                 .build();
 
+        private ScheduledExecutorService executor;
+        private int invocation;
+        private int maxRetries;
+        private int retryBackoff;
         private File callbackFile;
 
         @Override
         public void run() {
+            boolean delete = false;
             Callback callback = readCallback();
             URI uri = URI.create(callback.url);
-
             HttpContext context = createHttpContext(uri, callback.authentication);
             HttpEntity content = new StringEntity((String) callback.data, ContentType.APPLICATION_JSON);
             HttpPost post = new HttpPost(uri);
@@ -220,21 +236,53 @@ public class CallbackSimulator extends PostServeAction {
                 if (status >= 200 && status < 300) {
                     // in case of success, just print the status line
                     LOG.info("post to '{}' succeeded: response: {}", uri, response.getStatusLine());
+                    delete = true;
                 } else {
-                    // in error case also print response body if available
-                    LOG.warn("post to '{}' failed: response: {}\n{}",
-                            uri, response.getStatusLine(), readEntity(response.getEntity()));
+                    delete = rescheduleIfApplicable();
+                    if (delete) {
+                        String retryInfo = "";
+                        if (maxRetries > 0) {
+                            retryInfo = " after " + maxRetries + " attempts";
+                        }
+                        LOG.warn("post to '{}' failed{}: response: {}\n{}",
+                                uri, retryInfo, response.getStatusLine(), readEntity(response.getEntity()));
+                    } else {
+                        LOG.info("post to '{}' will be retried : response: {}\n{}",
+                                uri, response.getStatusLine(), readEntity(response.getEntity()));
+                    }
                 }
             } catch (Exception e) {
                 // in failure case print request body and exception
-                LOG.error("post to '{}' errored\ncontent {}\n{}", uri, content, readEntity(content), e);
+                delete = rescheduleIfApplicable();
+                if (delete) {
+                    String retryInfo = "";
+                    if (invocation > 1) {
+                        retryInfo = " after " + invocation + " attempts";
+                    }
+                    LOG.error("post to '{}' errored{}\ncontent {}\n{}", uri, retryInfo, content, readEntity(content),
+                            e);
+                } else {
+                    LOG.warn("post to '{}' will be retried\ncontent {}\n{}", uri, content, readEntity(content), e);
+                }
+
             } finally {
-                try {
-                    Files.deleteIfExists(callbackFile.toPath());
-                } catch (IOException e) {
-                    LOG.error("unable to delete callback definition file", e);
+                if (delete) {
+                    try {
+                        Files.deleteIfExists(callbackFile.toPath());
+                    } catch (IOException e) {
+                        LOG.error("unable to delete callback definition file", e);
+                    }
                 }
             }
+        }
+
+        private boolean rescheduleIfApplicable() {
+            invocation++;
+            if (invocation <= maxRetries) {
+                executor.schedule(this, retryBackoff * invocation, TimeUnit.MILLISECONDS);
+                return false;
+            }
+            return true;
         }
 
         private Callback readCallback() {
@@ -282,8 +330,12 @@ public class CallbackSimulator extends PostServeAction {
             return context;
         }
 
-        private static Runnable of(File callbackFile) {
+        private static Runnable of(ScheduledExecutorService executor, int maxRetries, int retryBackoff,
+                File callbackFile) {
             CallbackHandler result = new CallbackHandler();
+            result.maxRetries = maxRetries;
+            result.retryBackoff = retryBackoff;
+            result.executor = executor;
             result.callbackFile = callbackFile;
             return result;
         }

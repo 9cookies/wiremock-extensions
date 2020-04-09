@@ -43,7 +43,11 @@ The data type handling is the same as describe for the [json-body-transformer](j
 ### Callback processing
 
 Internally the callback simulator utilizes Java's `ScheduledExecutorService` with thread pool size of 50 to perform the callback requests. The thread pool size can be customized by specifying `SCHEDULED_THREAD_POOL_SIZE` environment variable with the desired size. Note that if the value is less than the default of 50 the default is used.
-Callback requests errors will be logged but note that there is no retry handling in any form. If a callback fails it fails...
+
+Callback requests errors will be logged but note that retry handling is disabled by default. If a callback fails it fails...
+
+Enabling retry handling for callbacks which may be useful during load testing depending on the service under test is as simple as specifying `MAX_RETRIES` with some positive value depending on the number of desired retries that should be performed. The retry handling uses a back off period of 5 seconds by default that can be configured by specifying `RETRY_BACKOFF` (default 5_000 milliseconds). This value is multiplied with the invocation count to reschedule the callback.
+So with `MAX_RETRIES` set to `3` retries will happen after 5, 10 and 15 seconds thus the callback will be retried for 30 seconds in total.  
 
 ### Request identification
 The callback requests emitted by the callback-simulator will contain the `X-Rps-TraceId` header populated with a random value so that services which evaluate this header may add this identifier to their logging context. It is possible to specify a custom value as trace id as shown below in the examples.
