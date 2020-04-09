@@ -402,8 +402,12 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
     }
 
     private void sleep() {
+        sleep(SLEEP);
+    }
+
+    private void sleep(long millis) {
         try {
-            Thread.sleep(SLEEP); // 60_000 * 10);
+            Thread.sleep(millis);
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
         }
