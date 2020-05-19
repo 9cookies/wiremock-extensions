@@ -1,5 +1,23 @@
 # Change Log
 
+## 2020-mm-dd - <changes>
+
+Important Notes: - none
+
+Version: 0.1.2
+
+Author: - none
+
+### Features
+- none
+
+### Improvements
+- none
+
+### Fixes
+- none
+
+
 ## 2020-05-19 - Improvements
 
 Important Notes: - none
