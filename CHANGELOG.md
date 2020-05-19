@@ -1,21 +1,16 @@
 # Change Log
 
-## 2020-mm-dd - <changes>
+## 2020-05-19 - Improvements
 
 Important Notes: - none
 
 Version: 0.1.1
 
-Author: - none
-
-### Features
-- none
+Author: M.Scheepers
 
 ### Improvements
 - Introduced retry handling to the `CallbackSimulator`
-
-### Fixes
-- none
+- Docker image respects `JAVA_OPTS` and exposes additional port `7091`
 
 
 ## 2020-04-08 - Features - Improvements
@@ -24,7 +19,7 @@ Important Notes: - none
 
 Version: 0.1.0
 
-Author: - M.Scheepers
+Author: M.Scheepers
 
 ### Features
 - added `$(!OffsetDateTime)` keyword with similar semantics as `$(!Instant)` keyword.
@@ -34,6 +29,7 @@ Author: - M.Scheepers
 - added support for custom `X-Rps-TraceId` header to callback definitions.
 - callback-simulator now persists callback definitions in the file system to reduce memory footprint of scheduled callbacks for load test scenarios to avoid OOM errors.   
 - added ability to configure callback-simulator's thread pool size using `SCHEDULED_THREAD_POOL_SIZE` environment variable so that it doesn't become a bottle neck in load test scenarios.  
+
 
 ## 2019-07-31 - Enhancement
 
