@@ -12,7 +12,7 @@ Author: - none
 - none
 
 ### Improvements
-- none
+- added support for large mapping files (3+ mb) provided as zip file
 
 ### Fixes
 - none
