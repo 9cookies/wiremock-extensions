@@ -1,8 +1,9 @@
 package com.ninecookies.wiremock.extensions.util;
 
+import static com.ninecookies.wiremock.extensions.util.Placeholders.PLACEHOLDER_PATTERN;
+
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.jayway.jsonpath.DocumentContext;
 
@@ -13,7 +14,6 @@ import com.jayway.jsonpath.DocumentContext;
  * @since 0.0.6
  */
 public class Placeholder {
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\(.*?\\)");
     private static final Predicate<String> CONTAINS_PATTERN = PLACEHOLDER_PATTERN.asPredicate();
 
     private final String pattern;
