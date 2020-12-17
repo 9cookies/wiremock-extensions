@@ -10,6 +10,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.resetAllRequests;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.jayway.restassured.RestAssured.given;
 import static com.ninecookies.wiremock.extensions.util.Maps.entry;
@@ -152,6 +153,34 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
 
         sleep();
         verify(1, postRequestedFor(urlEqualTo("/callbacks")));
+    }
+
+    @Test
+    public void testCallbackWithMultipleUrlReplacements() throws InterruptedException {
+        String postUrl = "/request/multi/partial";
+        String callbackPath = "/multi/callbacks";
+        String callbackUrl = "http://localhost:$(response.port)" + callbackPath + "?name=$(request.name)";
+
+        String postData = "{\"name\":\"john doe\"}";
+        String responseData = "{\"id\":\"$(!UUID)\",\"name\":\"$(name)\",\"port\":" + SERVER_PORT + "}";
+
+        stubFor(post(urlEqualTo(postUrl))
+                .withPostServeAction("callback-simulator",
+                        Callbacks.of(DELAY, callbackUrl, CallbackData.of("arbitrary-data")))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseData)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(200)));
+
+        stubFor(post(urlPathEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+
+        given().body(postData).contentType("application/json")
+                .when().post(postUrl)
+                .then().statusCode(200);
+
+        sleep();
+        verify(1, postRequestedFor(urlPathEqualTo(callbackPath)).withQueryParam("name", equalTo("john doe")));
     }
 
     @Test
