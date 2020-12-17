@@ -12,10 +12,10 @@ Author: - none
 - none
 
 ### Improvements
-- none
+- Callback URLs may now contain multiple placeholders
 
 ### Fixes
-- none
+- Bug during callback handling where exceptions where swallowed without logging
 
 
 ## 2020-05-19 - Improvements

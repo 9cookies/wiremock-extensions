@@ -2,6 +2,8 @@ package com.ninecookies.wiremock.extensions.util;
 
 import static com.ninecookies.wiremock.extensions.util.Objects.describe;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -38,10 +40,10 @@ import com.jayway.jsonpath.Option;
  * @since 0.0.6
  */
 public class Placeholders {
-
     private static final Logger LOG = LoggerFactory.getLogger(Placeholders.class);
     private static final UnaryOperator<String> QUOTES = s -> String.format("\"%s\"", s);
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\(.*?\\)");
+    static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\(.*?\\)");
+
     // visible for testing
     static final Pattern KEYWORD_PATTERN = Pattern.compile("\\$\\(!(" +
             Stream.of(Keyword.keywords()).map(Keyword::keyword).collect(Collectors.joining("|"))
@@ -65,6 +67,49 @@ public class Placeholders {
         return Stream.of(url.split("/"))
                 .filter(s -> !Strings.isNullOrEmpty(s))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Replaces placeholders and keywords in the specified {@code urlToTransform} by values found in the specified
+     * {@code placeholderSource}. If the placeholder is contained in a query string part of the URL it's value will be
+     * URL encoded.
+     *
+     * @param placeholderSource the {@link DocumentContext} to look for placeholder values.
+     * @param urlToTransform the URL to transform
+     * @return the transformed URL.
+     */
+    public static String transformUrl(DocumentContext placeholderSource, String urlToTransform) {
+        Map<String, Object> placeholders = new LinkedHashMap<>();
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(urlToTransform);
+        while (matcher.find()) {
+            String placeholder = matcher.group();
+            if (placeholders.containsKey(placeholder)) {
+                continue;
+            }
+            placeholders.put(placeholder, populatePlaceholder(placeholder, placeholderSource));
+        }
+        return replaceValuesInUrl(placeholders, urlToTransform);
+    }
+
+    private static String replaceValuesInUrl(Map<String, Object> placeholders, String urlToTransform) {
+        for (String key : placeholders.keySet()) {
+            String value = String.valueOf(placeholders.get(key));
+            int queryStringStart = urlToTransform.indexOf('?');
+            int keyStart = urlToTransform.indexOf(key);
+            if (queryStringStart > 0 && keyStart > queryStringStart) {
+                value = encodeValue(value);
+            }
+            urlToTransform = urlToTransform.replace(key, value);
+        }
+        return urlToTransform;
+    }
+
+    private static String encodeValue(String value) {
+        try {
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
@@ -202,7 +247,7 @@ public class Placeholders {
         };
 
         private static final Function<String, Instant> INSTANT_PROVIDER = s -> {
-            return calculateIfRequired(s, Instant.now());
+            return calculateIfRequired(s, Instant.now().truncatedTo(ChronoUnit.MILLIS));
         };
 
         private static final Keyword UUID = new SimpleKeyword("UUID", s -> java.util.UUID.randomUUID().toString());
