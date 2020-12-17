@@ -48,7 +48,6 @@ import com.ninecookies.wiremock.extensions.api.Authentication;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.api.Callbacks;
 import com.ninecookies.wiremock.extensions.util.Objects;
-import com.ninecookies.wiremock.extensions.util.Placeholder;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
 
 /**
@@ -143,9 +142,7 @@ public class CallbackSimulator extends PostServeAction {
     private Callback normalizeCallback(DocumentContext servedJson, Callback callback) {
         LOG.debug("url: {} data: {}", callback.url, Objects.describe(callback.data));
         callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
-        if (Placeholder.containsPattern(callback.url)) {
-            callback.url = Placeholder.of(callback.url).getSubstitute(servedJson);
-        }
+        callback.url = Placeholders.transformUrl(servedJson, callback.url);
         if (callback.traceId == null) {
             callback.traceId = UUID.randomUUID().toString().replace("-", "");
         }
@@ -220,51 +217,58 @@ public class CallbackSimulator extends PostServeAction {
 
         @Override
         public void run() {
+            LOG.debug("CallbackHandler.run()");
             boolean delete = false;
-            Callback callback = readCallback();
-            URI uri = URI.create(callback.url);
-            HttpContext context = createHttpContext(uri, callback.authentication);
-            HttpEntity content = new StringEntity((String) callback.data, ContentType.APPLICATION_JSON);
-            HttpPost post = new HttpPost(uri);
-            post.setConfig(REQUEST_CONFIG);
-            post.addHeader(RPS_TRACEID_HEADER, callback.traceId);
-            post.setEntity(content);
+            try {
+                Callback callback = readCallback();
+                URI uri = URI.create(callback.url);
+                HttpContext context = createHttpContext(uri, callback.authentication);
+                HttpEntity content = new StringEntity((String) callback.data, ContentType.APPLICATION_JSON);
+                HttpPost post = new HttpPost(uri);
+                post.setConfig(REQUEST_CONFIG);
+                post.addHeader(RPS_TRACEID_HEADER, callback.traceId);
+                post.setEntity(content);
 
-            try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-                HttpResponse response = client.execute(post, context);
-                int status = response.getStatusLine().getStatusCode();
-                if (status >= 200 && status < 300) {
-                    // in case of success, just print the status line
-                    LOG.info("post to '{}' succeeded: response: {}", uri, response.getStatusLine());
-                    delete = true;
-                } else {
+                try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+                    HttpResponse response = client.execute(post, context);
+                    int status = response.getStatusLine().getStatusCode();
+                    if (status >= 200 && status < 300) {
+                        // in case of success, just print the status line
+                        LOG.info("post to '{}' succeeded: response: {}", uri, response.getStatusLine());
+                        delete = true;
+                    } else {
+                        delete = rescheduleIfApplicable();
+                        if (delete) {
+                            String retryInfo = "";
+                            if (maxRetries > 0) {
+                                retryInfo = " after " + maxRetries + " attempts";
+                            }
+                            LOG.warn("post to '{}' failed{}: response: {}\n{}",
+                                    uri, retryInfo, response.getStatusLine(), readEntity(response.getEntity()));
+                        } else {
+                            LOG.info("post to '{}' will be retried : response: {}\n{}",
+                                    uri, response.getStatusLine(), readEntity(response.getEntity()));
+                        }
+                    }
+                } catch (Exception e) {
+                    // in failure case print request body and exception
                     delete = rescheduleIfApplicable();
                     if (delete) {
                         String retryInfo = "";
-                        if (maxRetries > 0) {
-                            retryInfo = " after " + maxRetries + " attempts";
+                        if (invocation > 1) {
+                            retryInfo = " after " + invocation + " attempts";
                         }
-                        LOG.warn("post to '{}' failed{}: response: {}\n{}",
-                                uri, retryInfo, response.getStatusLine(), readEntity(response.getEntity()));
+                        LOG.error("post to '{}' errored{}\ncontent {}\n{}", uri, retryInfo, content,
+                                readEntity(content),
+                                e);
                     } else {
-                        LOG.info("post to '{}' will be retried : response: {}\n{}",
-                                uri, response.getStatusLine(), readEntity(response.getEntity()));
+                        LOG.warn("post to '{}' will be retried\ncontent {}\n{}", uri, content, readEntity(content), e);
                     }
+
                 }
             } catch (Exception e) {
-                // in failure case print request body and exception
-                delete = rescheduleIfApplicable();
-                if (delete) {
-                    String retryInfo = "";
-                    if (invocation > 1) {
-                        retryInfo = " after " + invocation + " attempts";
-                    }
-                    LOG.error("post to '{}' errored{}\ncontent {}\n{}", uri, retryInfo, content, readEntity(content),
-                            e);
-                } else {
-                    LOG.warn("post to '{}' will be retried\ncontent {}\n{}", uri, content, readEntity(content), e);
-                }
-
+                delete = true;
+                LOG.error("unable to create http post", e);
             } finally {
                 if (delete) {
                     try {
