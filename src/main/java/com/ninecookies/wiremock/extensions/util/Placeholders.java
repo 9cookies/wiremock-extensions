@@ -247,7 +247,7 @@ public class Placeholders {
         };
 
         private static final Function<String, Instant> INSTANT_PROVIDER = s -> {
-            return calculateIfRequired(s, Instant.now());
+            return calculateIfRequired(s, Instant.now().truncatedTo(ChronoUnit.MILLIS));
         };
 
         private static final Keyword UUID = new SimpleKeyword("UUID", s -> java.util.UUID.randomUUID().toString());
