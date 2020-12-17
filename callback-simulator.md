@@ -184,7 +184,7 @@ int callbackDelay = 10000;
 
 // Note the usage of the com.ninecookies.wiremock.extensions.api.Callbacks class
 wireMockServer.stubFor(post(urlEqualTo("/url/to/post/to"))
-        .withPostServeAction("callback-simulator", Callbacks.of(callbackDelay, "$(!ENV[CBURL]), "$(!ENV[CBUSER])", "$(!ENV[CBPASS])", callbackData))
+        .withPostServeAction("callback-simulator", Callbacks.of(callbackDelay, "$(!ENV[CBURL])", "$(!ENV[CBUSER])", "$(!ENV[CBPASS])", callbackData))
         .willReturn(aResponse()
                 .withHeader("content-type", "application/json")
                 .withBody("{\"id\":\"$(!UUID)\"}")

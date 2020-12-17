@@ -7,13 +7,12 @@ public class SystemUtil {
 
     /**
      * Set the specified key and value to the systems environment to inject test values.
-     * 
+     *
      * @param key the key to set.
      * @param value the value to set.
      */
     public static void setenv(String key, String value) {
         try {
-            System.out.println("setting environment");
             Map<String, String> unmodifiableEnv = System.getenv();
             Class<?> envclass = unmodifiableEnv.getClass();
             Field map = envclass.getDeclaredField("m");
