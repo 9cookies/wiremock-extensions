@@ -8,6 +8,7 @@ import org.testng.annotations.BeforeClass;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.jayway.restassured.RestAssured;
+import com.ninecookies.wiremock.extensions.util.SystemUtil;
 
 public class AbstractExtensionTest {
 
@@ -19,6 +20,8 @@ public class AbstractExtensionTest {
         System.out.println("beforeClass()");
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
         System.setProperty("org.slf4j.simpleLogger.log.com.ninecookies.wiremock.extensions", "debug");
+        SystemUtil.setenv("CBUSER", "callback-user");
+        SystemUtil.setenv("CBPASS", "callback-pass");
 
         wireMockServer = new WireMockServer(wireMockConfig()
                 .port(SERVER_PORT)

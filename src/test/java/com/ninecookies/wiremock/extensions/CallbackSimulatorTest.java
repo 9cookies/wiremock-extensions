@@ -61,6 +61,23 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
     }
 
     @Test
+    public void testEnvAuthenticatedCallbackWithMapping() throws InterruptedException {
+        String code = "b63868c0";
+        String requestUrl = "/env-authenticated/callback";
+        String requestBody = String.format(CALLBACK_POST_DATA_FORMAT, code);
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+        String id = Json.node(responseJson).get("id").textValue();
+        String json = String.format(EXPECTED_CALLBACK_JSON_FORMAT, id, code);
+        sleep();
+        verify(1, postRequestedFor(urlEqualTo("/callbacks"))
+                .withBasicAuth(new BasicCredentials("callback-user", "callback-pass"))
+                .withRequestBody(equalToJson(json)));
+    }
+
+    @Test
     public void testAuthenticatedCallbackWithMapping() throws InterruptedException {
         String code = "b63868c0";
         String requestUrl = "/authenticated/callback";

@@ -447,6 +447,25 @@ public class JsonBodyTransformerTest extends AbstractExtensionTest {
         verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
     }
 
+    @Test
+    public void injectEnvironmentVariableValue() {
+        String responseBody = "{\"user\": \"$(!ENV[CBUSER])\"}";
+        String requestBody = "{}";
+
+        stubFor(post(urlEqualTo(REQUEST_URL)).willReturn(aResponse().withStatus(200)
+                .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+        Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(REQUEST_URL);
+
+        ExtractableResponse<?> er = response.then().statusCode(200)
+                .body("user", isA(String.class))
+                .extract();
+        String user = er.path("user");
+        assertEquals(user, "callback-user");
+
+        verify(postRequestedFor(urlEqualTo(REQUEST_URL)));
+    }
+
     @DataProvider
     private Object[][] uuidFormats() {
         return new Object[][] {
@@ -723,5 +742,4 @@ public class JsonBodyTransformerTest extends AbstractExtensionTest {
 
         verify(getRequestedFor(urlEqualTo(REQUEST_URL)));
     }
-
 }
