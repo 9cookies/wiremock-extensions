@@ -2,6 +2,7 @@ package com.ninecookies.wiremock.extensions.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
@@ -14,11 +15,45 @@ import java.util.regex.Matcher;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.jayway.jsonpath.DocumentContext;
 import com.ninecookies.wiremock.extensions.util.Placeholders.Keyword;
 
 public class PlaceholdersKeywordTest {
 
     private static final long OFFSET_MILLIS = 600;
+
+    @Test
+    public void testTransformUrl() {
+        DocumentContext placeholderSource = Placeholders.documentContextOf("{\"request\":"
+                + "{\"id\":25}" + ", \"response\":"
+                + "{\"name\":\"john doe\"}}");
+
+        String urlToTransform = "http://localhost/modify/$(request.id)?set=$(response.name)";
+        String transformedUrl = Placeholders.transformUrl(placeholderSource, urlToTransform);
+        assertEquals(transformedUrl, "http://localhost/modify/25?set=john+doe");
+    }
+
+    @Test
+    public void testTransformUrlWithUnknownPlaceholders() {
+        DocumentContext placeholderSource = Placeholders.documentContextOf("{\"request\":"
+                + "{\"id\":25}" + ", \"response\":"
+                + "{\"name\":\"john doe\"}}");
+
+        String urlToTransform = "http://localhost/modify/$(request.id)?set=$(response.unknown)";
+        String transformedUrl = Placeholders.transformUrl(placeholderSource, urlToTransform);
+        assertEquals(transformedUrl, "http://localhost/modify/25?set=null");
+    }
+
+    @Test
+    public void testTransformUrlWithoutPlaceholders() {
+        DocumentContext placeholderSource = Placeholders.documentContextOf("{\"request\":"
+                + "{\"id\":25}" + ", \"response\":"
+                + "{\"name\":\"john doe\"}}");
+
+        String urlToTransform = "http://localhost/modify/without?set=placeholders";
+        String transformedUrl = Placeholders.transformUrl(placeholderSource, urlToTransform);
+        assertEquals(transformedUrl, "http://localhost/modify/without?set=placeholders");
+    }
 
     @Test
     public void testUUIDPattern() {
