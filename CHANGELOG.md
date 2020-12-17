@@ -12,10 +12,12 @@ Author: - none
 - none
 
 ### Improvements
-- Callback URLs may now contain multiple placeholders
+- Callback URLs may now contain multiple placeholders.
+- Introduced new keyword `ENV` to provide access to environment variables.
+    - Callback authentication properties may contain keywords.
 
 ### Fixes
-- Bug during callback handling where exceptions where swallowed without logging
+- Bug during callback handling where exceptions where swallowed without logging.
 
 
 ## 2020-05-19 - Improvements
