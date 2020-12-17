@@ -70,6 +70,25 @@ public class Placeholders {
     }
 
     /**
+     * Checks whether the provided {@code value} is a keyword pattern and if so returns the keyword generated value.
+     *
+     * @param value value to be checked.
+     * @return a keyword related value if the specified {@code value} is a keyword pattern; otherwise the value itself.
+     */
+    public static String transformValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        Matcher isKey = KEYWORD_PATTERN.matcher(value);
+        if (isKey.matches()) {
+            LOG.debug(describe(isKey));
+            Keyword keyword = Keyword.of(isKey.group(1));
+            return String.valueOf(keyword.value(isKey.group(2)));
+        }
+        return value;
+    }
+
+    /**
      * Replaces placeholders and keywords in the specified {@code urlToTransform} by values found in the specified
      * {@code placeholderSource}. If the placeholder is contained in a query string part of the URL it's value will be
      * URL encoded.
@@ -214,6 +233,7 @@ public class Placeholders {
 
         private static final Random RANDOM_GENERATOR = new Random();
         private static final Pattern IS_CALCULATED = Pattern.compile("\\.plus\\[([HhMmSs]{1})([0-9\\-\\+]+)\\]");
+        private static final Pattern HAS_ARGUMENT = Pattern.compile("\\[([A-Z_]+)\\]");
 
         private static ChronoUnit stringToChronoUnit(String unit) {
             switch (unit.toLowerCase(Locale.ROOT)) {
@@ -250,6 +270,16 @@ public class Placeholders {
             return calculateIfRequired(s, Instant.now().truncatedTo(ChronoUnit.MILLIS));
         };
 
+        private static final Function<String, String> ENVIRONMENT_PROVIDER = s -> {
+            Matcher argument = HAS_ARGUMENT.matcher(s);
+            if (!argument.find()) {
+                throw new IllegalArgumentException("missing environment key: '" + s + "'");
+            }
+            String envKey = argument.group(1);
+            return System.getenv(envKey);
+        };
+
+        private static final Keyword ENV = new SimpleKeyword("ENV", s -> ENVIRONMENT_PROVIDER.apply(s));
         private static final Keyword UUID = new SimpleKeyword("UUID", s -> java.util.UUID.randomUUID().toString());
         private static final Keyword RANDOM = new SimpleKeyword("Random", s -> RANDOM_GENERATOR.nextInt());
         private static final Keyword INSTANT = new SimpleKeyword("Instant", s -> INSTANT_PROVIDER.apply(s).toString());
@@ -258,7 +288,7 @@ public class Placeholders {
         private static final Keyword OFFSET_DATE_TIME = new SimpleKeyword("OffsetDateTime",
                 s -> OFFSET_DATE_TIME_PROVIDER.apply(s).toString());
         private static final Map<String, Keyword> VALUES = Collections.unmodifiableMap(Stream
-                .of(UUID, RANDOM, INSTANT, TIMESTAMP, OFFSET_DATE_TIME)
+                .of(UUID, RANDOM, INSTANT, TIMESTAMP, OFFSET_DATE_TIME, ENV)
                 .collect(Collectors.toMap(Keyword::keyword, k -> k)));
 
         private static Keyword[] keywords() {
