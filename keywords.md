@@ -1,7 +1,10 @@
 # Keywords
 
-### Additional features
-To get even more generic responses that help better testing the transformer defines some key words that start with an exclamation mark `!`.
+## Additional Features
+
+To get even more generic responses that help better testing the wiremock-extensions provide some key words that start with an exclamation mark `!`.
+
+### Random value key words
 
 Generating random integer for a response property
 ```JSON
@@ -32,6 +35,8 @@ However, same suffixes result in same values for different properties. The follo
 }
 ```
 
+### Instant, date time and time stamp calculation
+
 Generating current time stamp in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) UTC format for a response property
 ```JSON
 { "created": "$(!Instant)" }
@@ -60,3 +65,10 @@ Generating computed time stamp for a response property using the response patter
 ```
 
 Note that all time stamps are returned in UTC format except offset date times which use the systems default time zone as offset.
+
+### Environment variable key word
+
+In addition it is possible to access environment variables if the variable doesn't exist `null` will be used as replacement.
+```JSON
+{ "configured": "$(!ENV[MY_ENV_KEY])" }
+```
