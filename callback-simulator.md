@@ -24,7 +24,7 @@ and the related JSON response
     "found_age": "$(age)",
     "composed_string": "$(name) is $(age) years old."
 }
-``` 
+```
 
 To reference the `name` of the request and the `id` of the response in a callback definition one has to prefix the match patterns in the callback data JSON like so
 
@@ -39,6 +39,8 @@ To reference the `name` of the request and the `id` of the response in a callbac
 Note the additional `timestamp` property which uses the `!Instant` [keyword](keywords.md) to populate the related value. 
 
 The data type handling is the same as describe for the [json-body-transformer](json-body-transformer.md#data-type-handling).
+
+Also for the callback URL request and response values may be referenced. If the replacement value is contained in a query string part it will be URL encoded.
 
 ### Callback processing
 
