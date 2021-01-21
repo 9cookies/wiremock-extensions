@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
 import java.time.Instant;
@@ -168,4 +169,37 @@ public class PlaceholdersKeywordTest {
         };
     }
 
+    @Test
+    public void testEnvironmentPatternMissingKeyword() {
+        Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher("$(!ENV)");
+        assertTrue(isKey.matches());
+        Keyword keyword = Keyword.of(isKey.group(1));
+        assertNotNull(keyword);
+
+        assertThrows(IllegalArgumentException.class, () -> keyword.value(isKey.group(2)));
+    }
+
+    @Test(dataProvider = "environmentPatternAndFixtures")
+    public void testEnvironmentPattern(String pattern, String expected) {
+        Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
+        assertTrue(isKey.matches());
+        System.out.println(isKey.group(1));
+        System.out.println(isKey.group(2));
+
+        Keyword keyword = Keyword.of(isKey.group(1));
+        assertNotNull(keyword);
+
+        Object value = keyword.value(isKey.group(2));
+        assertEquals(value, expected);
+
+    }
+
+    @DataProvider
+    private Object[][] environmentPatternAndFixtures() {
+        SystemUtil.setenv("SOME_ENVIRONMENT_KEY", "some-env-value");
+        return new Object[][] {
+                { "$(!ENV[SOME_ENVIRONMENT_KEY])", "some-env-value" },
+                { "$(!ENV[NON_EXISTING_ENVIRONMENT_KEY])", null }
+        };
+    }
 }

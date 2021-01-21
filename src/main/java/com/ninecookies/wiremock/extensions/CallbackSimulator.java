@@ -143,6 +143,11 @@ public class CallbackSimulator extends PostServeAction {
         LOG.debug("url: {} data: {}", callback.url, Objects.describe(callback.data));
         callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
         callback.url = Placeholders.transformUrl(servedJson, callback.url);
+        if (callback.authentication != null) {
+            callback.authentication = Authentication.of(
+                    Placeholders.transformValue(callback.authentication.getUsername()),
+                    Placeholders.transformValue(callback.authentication.getPassword()));
+        }
         if (callback.traceId == null) {
             callback.traceId = UUID.randomUUID().toString().replace("-", "");
         }

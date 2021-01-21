@@ -173,3 +173,59 @@ Similar in JSON
     }
 }
 ```
+
+or callback configuration based on environment variables instead of having confidential information in the JSON mapping file.
+
+
+```java
+// arbitrary JSON object that represents the payload to POST
+MyCallbackPayload callbackData = new MyCallbackPayload();
+int callbackDelay = 10000;
+
+// Note the usage of the com.ninecookies.wiremock.extensions.api.Callbacks class
+wireMockServer.stubFor(post(urlEqualTo("/url/to/post/to"))
+        .withPostServeAction("callback-simulator", Callbacks.of(callbackDelay, "$(!ENV[CBURL])", "$(!ENV[CBUSER])", "$(!ENV[CBPASS])", callbackData))
+        .willReturn(aResponse()
+                .withHeader("content-type", "application/json")
+                .withBody("{\"id\":\"$(!UUID)\"}")
+                .withTransformers("json-body-transformer")
+                .withStatus(201)));
+```
+
+Similar in JSON
+
+```JSON
+{
+    "request": {
+        "url": "/url/to/post/to",
+        "method": "POST"
+    },
+    "response": {
+        "status": 201,
+        "body": "{\"id\":\"$(!UUID)\"}",
+        "headers": {
+            "content-type": "application/json"
+        },
+        "transformers": [
+            "json-body-transformer"
+        ]
+    },
+    "postServeActions": {
+        "callback-simulator": {
+            "callbacks": [
+                {
+                    "delay": 10000,
+                    "url": "$(!ENV[CBURL])",
+                    "authentication":  {
+                      "username": "$(!ENV[CBUSER])",
+                      "password": "$(!ENV[CBPASS])"
+                    },
+                    "data": {
+                        "json representation": "of MyCallbackPayload"
+                    }
+                }
+            ]
+        }
+    }
+}
+```
