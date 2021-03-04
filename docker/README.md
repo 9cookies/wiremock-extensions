@@ -108,8 +108,7 @@ e.g. in a pom.xml file for integration tests
 
 ```
 
-When used for integration testing with SQS message publishing to an Amazon SQS-compatible interface provided through
-another docker container the other and the wiremock container must share a network.
+When used for integration testing with SQS message publishing to an Amazon SQS-compatible interface provided through another docker container the other and the wiremock container must share a network for a proper resolution of `getQueueUrl()` results.
 
 The example below shows the maven docker configuration to use wiremock container alongside the fully functional local
 AWS cloud stack (localstack) container with SQS enabled.
@@ -127,7 +126,7 @@ AWS cloud stack (localstack) container with SQS enabled.
             <image>
                 <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack</name>
                 <run>
-                    <!-- note the wiremock port exposed here
+                    <!-- note the wiremock port is exposed on this container -->
                     <ports>
                         <port>${sqs.port}:4576</port>
                         <port>8081:8080</port>
@@ -158,19 +157,22 @@ AWS cloud stack (localstack) container with SQS enabled.
             <image>
                 <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-wiremock</name>
                 <run>
+                    <!-- note wiremock uses the localstack network -->
+                    <network>
+                        <mode>container</mode>
+                        <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack</name>
+                    </network>
+                    <!-- note wiremock uses port 8090 as default port occupied by localstack dashboard -->
+                    <cmd>--port 8090</cmd>
                     <env>
                         <MAX_RETRIES>3</MAX_RETRIES>
                         <RETRY_BACKOFF>500</RETRY_BACKOFF>
+                        <!-- note wiremock defines the localstack SQS messaging port - not the mapped port -->
                         <MESSAGING_SQS_ENDPOINT>http://localhost:4576</MESSAGING_SQS_ENDPOINT>
                         <AWS_REGION>us-east-1</AWS_REGION>
                         <AWS_ACCESS_KEY_ID>X</AWS_ACCESS_KEY_ID>
                         <AWS_SECRET_ACCESS_KEY>X</AWS_SECRET_ACCESS_KEY>
                     </env>
-                    <network>
-                        <mode>container</mode>
-                        <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack</name>
-                    </network>
-                    <cmd>--port 8090</cmd>
                     <volumes>
                         <bind>
                             <volume>${docker.wiremock.resources}/__files:/home/wiremock/__files</volume>
