@@ -1,0 +1,41 @@
+{
+    "request": {
+        "url": "/request/sqs-complex/callback",
+        "method": "POST"
+    },
+    "response": {
+        "status": 201,
+        "jsonBody": {"id":"$(!UUID)" },
+        "headers": {
+            "content-type": "application/json"
+        },
+        "transformers": [
+            "json-body-transformer"
+        ]
+    },
+    "postServeActions": {
+        "callback-simulator": {
+            "callbacks": [
+                {
+                    "delay": 100,
+                    "queue": "test-queue-name",
+                    "data": {
+                        "version": 1,
+                        "metadata": {
+                            "type": "metadata-type",
+                            "version": 1,
+                            "createdAt": "$(!Instant)",
+                            "source": "sqs-test-mapping.json"
+                        },
+                        "content": {
+                            "requestId": "$(request.id)",
+                            "event": "some-event",
+                            "payload": "{\"event\":\"some-event\",\"order\":{\"country_code\":\"de\",\"code\":\"mWcanDjW\"},\"event_data\":{\"pickup\":\"$(!OffsetDateTime.plus[m15])\",\"dropoff\":\"$(!OffsetDateTime.plus[m30])\"}}",
+                            "timestamp": "$(!Instant.plus[m-1])"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

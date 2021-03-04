@@ -72,6 +72,12 @@
 			<artifactId>httpclient</artifactId>
 			<version>${httpclient.version}</version>
 		</dependency>
+		<!-- used to send SQS messages -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>amazon-sqs-java-messaging-lib</artifactId>
+			<version>1.0.8</version>
+		</dependency>
 		<!-- logging -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
@@ -121,6 +127,12 @@
 			<groupId>com.jayway.restassured</groupId>
 			<artifactId>json-schema-validator</artifactId>
 			<version>${restassured.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.elasticmq</groupId>
+			<artifactId>elasticmq-rest-sqs_2.12</artifactId>
+			<version>1.1.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -59,7 +59,25 @@ public class PlaceholdersKeywordTest {
     @Test
     public void testUUIDPattern() {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher("$(!UUID)");
-        assertTrue(isKey.matches());
+        assertTrue(isKey.find());
+
+        Keyword keyword = Keyword.of(isKey.group(1));
+        assertNotNull(keyword);
+
+        Object value = keyword.value(isKey.group(2));
+        assertNotNull(value);
+
+        UUID uuid = UUID.fromString(value.toString());
+        assertNotNull(uuid);
+    }
+
+    @Test
+    public void testUUIDPatternInString() {
+
+        System.out.println("pattern: [" + Placeholders.KEYWORD_PATTERN.pattern() + "]");
+
+        Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher("in string $(!UUID) pattern");
+        assertTrue(isKey.find());
 
         Keyword keyword = Keyword.of(isKey.group(1));
         assertNotNull(keyword);
@@ -74,7 +92,7 @@ public class PlaceholdersKeywordTest {
     @Test
     public void testRandomPattern() {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher("$(!Random)");
-        assertTrue(isKey.matches());
+        assertTrue(isKey.find());
 
         Keyword keyword = Keyword.of(isKey.group(1));
         assertNotNull(keyword);
@@ -89,7 +107,7 @@ public class PlaceholdersKeywordTest {
     @Test(dataProvider = "offsetDateTimePatternsAndFixtures")
     public void testOffsetDateTimePatterns(String pattern, OffsetDateTime expected) {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
-        assertTrue(isKey.matches());
+        assertTrue(isKey.find());
 
         Keyword keyword = Keyword.of(isKey.group(1));
         assertNotNull(keyword);
@@ -111,13 +129,14 @@ public class PlaceholdersKeywordTest {
                 { "$(!OffsetDateTime.plus[m-1])", OffsetDateTime.now().plusMinutes(-1) },
                 { "$(!OffsetDateTime.plus[h1])", OffsetDateTime.now().plusHours(1) },
                 { "$(!OffsetDateTime.plus[h-1])", OffsetDateTime.now().plusHours(-1) },
+                { "quoted \"$(!OffsetDateTime.plus[h-1])\" time", OffsetDateTime.now().plusHours(-1) },
         };
     }
 
     @Test(dataProvider = "instantPatternsAndFixtures")
     public void testInstantPatterns(String pattern, Instant expected) {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
-        assertTrue(isKey.matches());
+        assertTrue(isKey.find());
 
         Keyword keyword = Keyword.of(isKey.group(1));
         assertNotNull(keyword);
@@ -139,13 +158,14 @@ public class PlaceholdersKeywordTest {
                 { "$(!Instant.plus[m-1])", Instant.now().plus(-1, ChronoUnit.MINUTES) },
                 { "$(!Instant.plus[h1])", Instant.now().plus(1, ChronoUnit.HOURS) },
                 { "$(!Instant.plus[h-1])", Instant.now().plus(-1, ChronoUnit.HOURS) },
+                { "quoted \"$(!Instant.plus[h-1])\" time", Instant.now().plus(-1, ChronoUnit.HOURS) },
         };
     }
 
     @Test(dataProvider = "timestampPatternsAndFixtures")
     public void testTimestampPatterns(String pattern, long expected) {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
-        assertTrue(isKey.matches());
+        assertTrue(isKey.find());
 
         Keyword keyword = Keyword.of(isKey.group(1));
         assertNotNull(keyword);
@@ -166,13 +186,14 @@ public class PlaceholdersKeywordTest {
                 { "$(!Timestamp.plus[m-1])", Instant.now().plus(-1, ChronoUnit.MINUTES).toEpochMilli() },
                 { "$(!Timestamp.plus[h1])", Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli() },
                 { "$(!Timestamp.plus[h-1])", Instant.now().plus(-1, ChronoUnit.HOURS).toEpochMilli() },
+                { "quoted \"$(!Timestamp.plus[h-1])\" time", Instant.now().plus(-1, ChronoUnit.HOURS).toEpochMilli() },
         };
     }
 
     @Test
     public void testEnvironmentPatternMissingKeyword() {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher("$(!ENV)");
-        assertTrue(isKey.matches());
+        assertTrue(isKey.find());
         Keyword keyword = Keyword.of(isKey.group(1));
         assertNotNull(keyword);
 
@@ -182,7 +203,7 @@ public class PlaceholdersKeywordTest {
     @Test(dataProvider = "environmentPatternAndFixtures")
     public void testEnvironmentPattern(String pattern, String expected) {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
-        assertTrue(isKey.matches());
+        assertTrue(isKey.find());
         System.out.println(isKey.group(1));
         System.out.println(isKey.group(2));
 
