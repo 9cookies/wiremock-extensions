@@ -9,10 +9,11 @@ Version: 0.2.0
 Author: M.Scheepers
 
 ### Features
-- The callback-simulator post serve extension now supports AWS SQS message publishing
+- The callback-simulator post serve extension now supports AWS SQS message publishing.
 
 ### Improvements
 - Callback URLs may now contain multiple placeholders.
+- Support for string embedded keyword usage.
 - Introduced new keyword `ENV` to provide access to environment variables.
     - Callback authentication properties may contain keywords.
 
