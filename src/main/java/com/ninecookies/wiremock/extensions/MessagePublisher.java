@@ -21,11 +21,21 @@ import com.ninecookies.wiremock.extensions.util.Strings;
 /**
  * Implements {@link AutoCloseable} and provides the {@link #sendMessage(String, String)} method to publish messages to
  * an SQS queue.<br>
- * Instances can conveniently with the {@link #standard()} using the {@link AmazonSQSClient}.
+ * Instances with the {@link #standard()} {@link AmazonSQSClient} can be conveniently
+ * {@link SqsMessagePublisherBuilder#build()}.
  *
- * {@code
- *
+ * <pre>
+ * <code>
+ * try (MessagePublisher publisher = MessagePublisher.standard().build()) {
+ *     String messageJson = "JSON message string";
+ *     String queueName = "queue-name";
+ *     publisher.sendMessage(queueName, messageJson)
+ *     LOG.info("message published to '{}'", queueName);
+ * } catch (Exception e) {
+ *     LOG.error("unable to publish SQS message", e);
  * }
+ * </code>
+ * </pre>
  */
 public class MessagePublisher implements AutoCloseable {
 
