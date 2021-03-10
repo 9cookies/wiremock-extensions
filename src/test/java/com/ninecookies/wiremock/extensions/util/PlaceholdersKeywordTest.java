@@ -73,9 +73,6 @@ public class PlaceholdersKeywordTest {
 
     @Test
     public void testUUIDPatternInString() {
-
-        System.out.println("pattern: [" + Placeholders.KEYWORD_PATTERN.pattern() + "]");
-
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher("in string $(!UUID) pattern");
         assertTrue(isKey.find());
 
@@ -204,8 +201,6 @@ public class PlaceholdersKeywordTest {
     public void testEnvironmentPattern(String pattern, String expected) {
         Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
         assertTrue(isKey.find());
-        System.out.println(isKey.group(1));
-        System.out.println(isKey.group(2));
 
         Keyword keyword = Keyword.of(isKey.group(1));
         assertNotNull(keyword);

@@ -26,7 +26,6 @@ public class AbstractExtensionTest {
 
     @BeforeClass
     public void beforeClass() {
-        System.out.println("beforeClass()");
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
         System.setProperty("org.slf4j.simpleLogger.log.com.ninecookies.wiremock.extensions", "debug");
         SystemUtil.setenv("CBUSER", "callback-user");
@@ -58,6 +57,5 @@ public class AbstractExtensionTest {
     public void afterClass() {
         wireMockServer.stop();
         sqsServer.stopAndWait();
-        System.out.println("afterClass()");
     }
 }
