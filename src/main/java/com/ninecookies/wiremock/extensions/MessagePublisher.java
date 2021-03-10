@@ -39,6 +39,8 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  */
 public class MessagePublisher implements AutoCloseable {
 
+    private static final Logger LOG = LoggerFactory.getLogger(MessagePublisher.class);
+
     /**
      * Implements the builder patter to create {@link MessagePublisher} instances ready to be used for SQS messaging.
      */
@@ -74,6 +76,8 @@ public class MessagePublisher implements AutoCloseable {
         }
     }
 
+    private static SqsMessagePublisherBuilder builder;
+
     /**
      * Creates an SQS message publisher builder instance with standard configuration.
      *
@@ -90,9 +94,6 @@ public class MessagePublisher implements AutoCloseable {
         }
         return builder;
     }
-
-    private static final Logger LOG = LoggerFactory.getLogger(MessagePublisher.class);
-    private static SqsMessagePublisherBuilder builder;
 
     private final Connection connection;
     private Session session;
