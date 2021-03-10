@@ -63,7 +63,9 @@ The properties shared by all callbacks are the `delay` and the `data` where the 
 
 ### SQS Callbacks
 
-The configuration for the AWS SQS client requires the `AWS_REGION` environment variable to be provided. For testing purposes it is possible to specify the `MESSAGING_SQS_ENDPOINT`. 
+The configuration for the AWS SQS client requires the `AWS_REGION` environment variable to be provided. For testing purposes it is possible to specify the `MESSAGING_SQS_ENDPOINT` but depending of the test stack (elasticMQ / localstack) access id and secret key might be required as well.
+
+When running as a kubernetes pod in a larger test environment with real AWS queues the endpoint should be empty so that the default AWS endpoint is used. The credentials should be set up through the container.
 
 The only additional property for SQS callbacks is the `queue` property to provide the queue name to publish messages to. The queue property may contain placeholders like request and response references or an [environment variable](keywords.md#environment-variable-key-word).
 
