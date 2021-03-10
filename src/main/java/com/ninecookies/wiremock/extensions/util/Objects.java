@@ -2,10 +2,16 @@ package com.ninecookies.wiremock.extensions.util;
 
 import java.util.regex.Matcher;
 
+import com.github.tomakehurst.wiremock.common.Json;
 import com.github.tomakehurst.wiremock.http.Response;
 import com.jayway.jsonpath.DocumentContext;
 
 public class Objects {
+
+    public static <T> T convert(Object source, Class<T> destinationType) {
+        String content = Json.write(source);
+        return Json.read(content, destinationType);
+    }
 
     public static String describe(Response response) {
         if (response == null) {

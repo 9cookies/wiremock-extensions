@@ -212,7 +212,7 @@ public class Placeholders {
     private static Object populatePlaceholder(String pattern, DocumentContext documentContext) {
         Object result = null;
         Matcher isKey = KEYWORD_PATTERN.matcher(pattern);
-        if (isKey.matches()) {
+        if (isKey.find()) {
             LOG.debug(describe(isKey));
             Keyword keyword = Keyword.of(isKey.group(1));
             result = keyword.value(isKey.group(2));

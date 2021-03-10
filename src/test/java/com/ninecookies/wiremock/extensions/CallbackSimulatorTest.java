@@ -15,15 +15,22 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.jayway.restassured.RestAssured.given;
 import static com.ninecookies.wiremock.extensions.util.Maps.entry;
 import static com.ninecookies.wiremock.extensions.util.Maps.mapOf;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.amazonaws.services.sqs.model.Message;
+import com.amazonaws.services.sqs.model.PurgeQueueRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.tomakehurst.wiremock.client.BasicCredentials;
 import com.github.tomakehurst.wiremock.common.Json;
@@ -55,9 +62,13 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
     private static final String EXPECTED_CALLBACK_JSON_FORMAT = "{\"response_id\":\"%s\",\"request_code\":\"%s\"," +
             "\"url_parts_1\":\"callback\",\"defined_value\":\"from-mapping-file\"}";
 
+    private static final String QUEUE_NAME = "test-queue-name";
+
     @BeforeMethod
     public void beforeMethod() {
         resetAllRequests();
+
+        sqsClient.purgeQueue(new PurgeQueueRequest(sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl()));
     }
 
     @Test
@@ -445,6 +456,195 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
                 .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData.timestamp + "')]")));
+    }
+
+    @Test
+    public void testSqsMessageCallback() {
+        String requestUrl = "/request/sqs/callback";
+        String requestBody = "{\"code\":\"request-code\"}";
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        sleep();
+        List<Message> messages = sqsClient
+                .receiveMessage(sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl())
+                .getMessages();
+        assertFalse(messages.isEmpty());
+        assertEquals(messages.size(), 1);
+        String responseId = Json.node(responseJson).get("id").textValue();
+
+        String messageText = messages.get(0).getBody();
+        JsonNode message = Json.node(messageText);
+        assertEquals(message.get("response_id").textValue(), responseId);
+        assertEquals(message.get("request_code").textValue(), "request-code");
+        assertEquals(message.get("url_parts_1").textValue(), "sqs");
+        assertEquals(message.get("defined_value").textValue(), "from-mapping-file");
+    }
+
+    @Test
+    public void testComplexSqsMessageCallback() {
+        String requestUrl = "/request/sqs-complex/callback";
+        String requestId = UUID.randomUUID().toString();
+        String requestBody = "{\"code\":\"request-code\", \"id\": \"" + requestId + "\"}";
+        given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201);
+
+        sleep();
+        List<Message> messages = sqsClient
+                .receiveMessage(sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl())
+                .getMessages();
+        assertFalse(messages.isEmpty());
+        assertEquals(messages.size(), 1);
+
+        String messageText = messages.get(0).getBody();
+        JsonNode message = Json.node(messageText);
+        assertEquals(message.findValuesAsText("requestId").get(0), requestId);
+    }
+
+    @Test
+    public void testMixedCallbacks() {
+        String requestUrl = "/request/sqs-and-http/callback";
+        String requestBody = "{\"code\":\"request-code\"}";
+
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+
+        String callbackPath = "/callback/sqs-and-http";
+        String callbackUrl = "http://localhost:" + SERVER_PORT + callbackPath;
+
+        Map<String, Object> httpCallbackData = mapOf(entry("response_id", "$(response.id)"),
+                entry("data", "url-data"),
+                entry("request_code", "$(request.code)"),
+                entry("timestamp", "$(!Timestamp)"));
+
+        Map<String, Object> sqsCallbackData = mapOf(entry("response_id", "$(response.id)"),
+                entry("data", "sqs-data"),
+                entry("request_code", "$(request.code)"),
+                entry("timestamp", "$(!Timestamp)"));
+
+        Callbacks callbacks = Callbacks.of(
+                Callback.of(100, callbackUrl, httpCallbackData),
+                Callback.ofQueueMessage(100, QUEUE_NAME, sqsCallbackData));
+
+        stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", callbacks)
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String responseId = Json.node(responseJson).get("id").textValue();
+
+        sleep();
+
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
+                .withRequestBody(matchingJsonPath("$.[?(@.response_id == '" + responseId + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.request_code == 'request-code')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.data == 'url-data')]")));
+
+        List<Message> messages = sqsClient
+                .receiveMessage(sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl())
+                .getMessages();
+        assertFalse(messages.isEmpty());
+        assertEquals(messages.size(), 1);
+
+        String messageText = messages.get(0).getBody();
+        JsonNode message = Json.node(messageText);
+        assertEquals(message.get("response_id").textValue(), responseId);
+        assertEquals(message.get("request_code").textValue(), "request-code");
+        assertEquals(message.get("data").textValue(), "sqs-data");
+    }
+
+    @Test
+    public void testSqsEnvironmentQueueNameCallback() {
+        String requestUrl = "/request/sqs-env-queue/callback";
+        String requestBody = "{\"code\":\"request-code\"}";
+
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+
+        Map<String, Object> sqsCallbackData = mapOf(entry("response_id", "$(response.id)"),
+                entry("data", "sqs-data"),
+                entry("request_code", "$(request.code)"),
+                entry("timestamp", "$(!Timestamp)"));
+
+        Callbacks callbacks = Callbacks.of(
+                Callback.ofQueueMessage(100, "$(!ENV[CALLBACK_QUEUE])", sqsCallbackData));
+
+        stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", callbacks)
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String responseId = Json.node(responseJson).get("id").textValue();
+
+        sleep();
+
+        List<Message> messages = sqsClient
+                .receiveMessage(sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl())
+                .getMessages();
+        assertFalse(messages.isEmpty(), "no messages received");
+        assertEquals(messages.size(), 1);
+
+        String messageText = messages.get(0).getBody();
+        JsonNode message = Json.node(messageText);
+        assertEquals(message.get("response_id").textValue(), responseId);
+        assertEquals(message.get("request_code").textValue(), "request-code");
+        assertEquals(message.get("data").textValue(), "sqs-data");
+    }
+
+    @Test
+    public void testInvalidCallbackWithoutQueueAndUrl() {
+        String requestUrl = "/request/sqs/invalid";
+        String requestBody = "{\"code\":\"request-code\"}";
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+
+        Map<String, Object> sqsCallbackData = mapOf(entry("response_id", "$(response.id)"),
+                entry("data", "sqs-data"),
+                entry("request_code", "$(request.code)"),
+                entry("timestamp", "$(!Timestamp)"));
+
+        Map<String, Object> sqsCallback = mapOf(
+                entry("delay", 100),
+                entry("data", sqsCallbackData));
+
+        Map<String, Object> callbacks = mapOf(entry("callbacks", Arrays.asList(sqsCallback)));
+
+        stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", callbacks)
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201);
+
+        sleep();
+
+        List<Message> messages = sqsClient
+                .receiveMessage(sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl())
+                .getMessages();
+        assertTrue(messages.isEmpty());
     }
 
     private void sleep() {

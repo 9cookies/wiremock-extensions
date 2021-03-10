@@ -2,9 +2,14 @@ package com.ninecookies.wiremock.extensions;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
+import org.elasticmq.rest.sqs.SQSRestServer;
+import org.elasticmq.rest.sqs.SQSRestServerBuilder;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.jayway.restassured.RestAssured;
@@ -12,16 +17,31 @@ import com.ninecookies.wiremock.extensions.util.SystemUtil;
 
 public class AbstractExtensionTest {
 
+    private static final int SQS_PORT = 1060;
+    private SQSRestServer sqsServer;
+    protected AmazonSQS sqsClient;
+
     private static final int SERVER_PORT = 9090;
     private WireMockServer wireMockServer;
 
     @BeforeClass
     public void beforeClass() {
-        System.out.println("beforeClass()");
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
         System.setProperty("org.slf4j.simpleLogger.log.com.ninecookies.wiremock.extensions", "debug");
         SystemUtil.setenv("CBUSER", "callback-user");
         SystemUtil.setenv("CBPASS", "callback-pass");
+        SystemUtil.setenv("CALLBACK_QUEUE", "test-queue-name");
+        SystemUtil.setenv("MESSAGING_SQS_ENDPOINT", "http://localhost:" + SQS_PORT);
+        SystemUtil.setenv("AWS_REGION", "us-east-1");
+
+        sqsServer = SQSRestServerBuilder
+                .withInterface("localhost").withPort(SQS_PORT)
+                .start();
+
+        sqsClient = AmazonSQSClientBuilder.standard()
+                .withEndpointConfiguration(new EndpointConfiguration("http://localhost:1060", "us-east-1"))
+                .build();
+        sqsClient.createQueue("test-queue-name");
 
         wireMockServer = new WireMockServer(wireMockConfig()
                 .port(SERVER_PORT)
@@ -36,6 +56,6 @@ public class AbstractExtensionTest {
     @AfterClass(alwaysRun = true)
     public void afterClass() {
         wireMockServer.stop();
-        System.out.println("afterClass()");
+        sqsServer.stopAndWait();
     }
 }

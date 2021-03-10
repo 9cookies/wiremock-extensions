@@ -6,6 +6,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 
 import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.InvalidPathException;
 
 /**
  * Represents a placeholder for this extensions.
@@ -90,7 +91,12 @@ public class Placeholder {
         if (documentContext == null) {
             return null;
         }
-        return documentContext.read(jsonPath());
+        String path = jsonPath();
+        try {
+            return documentContext.read(path);
+        } catch (InvalidPathException e) {
+            throw new IllegalArgumentException("The path '" + path + "' is invalid: " + e.getMessage());
+        }
     }
 
     /**

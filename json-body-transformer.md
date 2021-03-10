@@ -24,7 +24,7 @@ The JSON of a response body referencing the values of `age` and `name` might loo
     "found_age": "$(age)",
     "composed_string": "$(name) is $(age) years old."
 }
-``` 
+```
 
 ### Data Type Handling
 

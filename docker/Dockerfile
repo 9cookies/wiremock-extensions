@@ -17,8 +17,9 @@ COPY docker-entrypoint.sh /
 WORKDIR /home/wiremock
 VOLUME /home/wiremock
 
-EXPOSE 8080 8443
-EXPOSE 7091 7091
+EXPOSE 8080
+EXPOSE 8443
+EXPOSE 7091
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 

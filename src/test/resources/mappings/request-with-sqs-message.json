@@ -1,0 +1,32 @@
+{
+    "request": {
+        "url": "/request/sqs/callback",
+        "method": "POST"
+    },
+    "response": {
+        "status": 201,
+        "jsonBody": {"id":"$(!UUID)" },
+        "headers": {
+            "content-type": "application/json"
+        },
+        "transformers": [
+            "json-body-transformer"
+        ]
+    },
+    "postServeActions": {
+        "callback-simulator": {
+            "callbacks": [
+                {
+                    "delay": 100,
+                    "queue": "test-queue-name",
+                    "data": {
+                        "response_id": "$(response.id)",
+                        "request_code": "$(request.code)",
+                        "url_parts_1": "$(urlParts[1])",
+                        "defined_value": "from-mapping-file"
+                    }
+                }
+            ]
+        }
+    }
+}

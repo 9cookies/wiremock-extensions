@@ -4,21 +4,24 @@
 
 Important Notes: - none
 
-Version: 0.1.2
+Version: 0.2.0
 
-Author: - none
+Author: M.Scheepers
 
 ### Features
-- none
+- The callback-simulator post serve extension now supports AWS SQS message publishing.
 
 ### Improvements
 - Callback URLs may now contain multiple placeholders.
+- Support for string embedded keyword usage.
 - Introduced new keyword `ENV` to provide access to environment variables.
     - Callback authentication properties may contain keywords.
 
 ### Fixes
 - Bug during callback handling where exceptions where swallowed without logging.
 
+### Dependencies
+- bumped jackson-databind to 2.10.5.1
 
 ## 2020-05-19 - Improvements
 

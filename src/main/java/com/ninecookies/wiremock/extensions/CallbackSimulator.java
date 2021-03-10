@@ -2,7 +2,6 @@ package com.ninecookies.wiremock.extensions;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -14,27 +13,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpResponse;
-import org.apache.http.ParseException;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.AuthCache;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.client.utils.URIUtils;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.BasicAuthCache;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,11 +22,14 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.extension.PostServeAction;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.jayway.jsonpath.DocumentContext;
+import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallback;
+import com.ninecookies.wiremock.extensions.SqsCallbackHandler.SqsCallback;
 import com.ninecookies.wiremock.extensions.api.Authentication;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.api.Callbacks;
 import com.ninecookies.wiremock.extensions.util.Objects;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
+import com.ninecookies.wiremock.extensions.util.Strings;
 
 /**
  * Implements the {@link PostServeAction} interface and provides the ability to specify callback invocations for request
@@ -119,13 +100,34 @@ public class CallbackSimulator extends PostServeAction {
         Callbacks callbacks = parameters.as(Callbacks.class);
 
         for (Callback callback : callbacks.callbacks) {
-            Callback normalizedCallback = normalizeCallback(servedJson, callback);
-            File callbackDefinition = persistCallback(normalizedCallback);
-            LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
-                    instance, callback.url, callback.delay, callback.data);
-            Runnable callbackHandler = CallbackHandler.of(executor, maxRetries, retryBackoff, callbackDefinition);
-            executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
+            if (!Strings.isNullOrEmpty(callback.url)) {
+                scheduleHttpCallback(servedJson, Objects.convert(callback, HttpCallback.class));
+            } else if (!Strings.isNullOrEmpty(callback.queue)) {
+                scheduleSqsCallback(servedJson, Objects.convert(callback, SqsCallback.class));
+            } else {
+                throw new IllegalStateException("Unknown callback type - either 'queue' or 'url' must be specified.");
+            }
         }
+    }
+
+    private void scheduleSqsCallback(DocumentContext servedJson, SqsCallback callback) {
+        // normalize callback
+        callback.queue = Placeholders.transformValue(callback.queue);
+        callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
+        File callbackDefinition = persistCallback(callback);
+        LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
+                instance, callback.queue, callback.delay, callback.data);
+        Runnable callbackHandler = SqsCallbackHandler.of(callbackDefinition);
+        executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
+    }
+
+    private void scheduleHttpCallback(DocumentContext servedJson, HttpCallback callback) {
+        HttpCallback normalizedCallback = normalizeHttpCallback(servedJson, callback);
+        File callbackDefinition = persistCallback(normalizedCallback);
+        LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
+                instance, callback.url, callback.delay, callback.data);
+        Runnable callbackHandler = HttpCallbackHandler.of(executor, maxRetries, retryBackoff, callbackDefinition);
+        executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -139,7 +141,7 @@ public class CallbackSimulator extends PostServeAction {
      * @return the normalized {@link Callback} with replaced patterns and keywords according to the specified
      *         {@code servedJson}.
      */
-    private Callback normalizeCallback(DocumentContext servedJson, Callback callback) {
+    private HttpCallback normalizeHttpCallback(DocumentContext servedJson, HttpCallback callback) {
         LOG.debug("url: {} data: {}", callback.url, Objects.describe(callback.data));
         callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
         callback.url = Placeholders.transformUrl(servedJson, callback.url);
@@ -157,12 +159,12 @@ public class CallbackSimulator extends PostServeAction {
 
     /**
      * Persists the specified {@code callback} as temporary file in the file system to be picked up by the
-     * scheduled {@link CallbackHandler} when due to reduce the memory footprint during callback handling.
+     * scheduled {@link HttpCallbackHandler} when due to reduce the memory footprint during callback handling.
      *
      * @param callback the {@link Callback} to persist.
      * @return the temporary {@link File} containing the normalized callback definition.
      */
-    private File persistCallback(Callback callback) {
+    private File persistCallback(Object callback) {
         try {
             File result = File.createTempFile("callback-json-", ".tmp");
             LOG.debug("callback-json file: {}", result);
@@ -197,155 +199,6 @@ public class CallbackSimulator extends PostServeAction {
             if (result.getPriority() != Thread.NORM_PRIORITY) {
                 result.setPriority(Thread.NORM_PRIORITY);
             }
-            return result;
-        }
-    }
-
-    /**
-     * Implements {@link Runnable} and uses {@link HttpPost} in combination with {@link HttpEntity} and
-     * {@link HttpContext} to emit a POST request according to the referenced callback definition.
-     */
-    private static final class CallbackHandler implements Runnable {
-
-        private static final String RPS_TRACEID_HEADER = "X-Rps-TraceId";
-        private static final RequestConfig REQUEST_CONFIG = RequestConfig.custom()
-                .setSocketTimeout(2_000)
-                .setConnectTimeout(3_000)
-                .setConnectionRequestTimeout(5_000)
-                .build();
-
-        private ScheduledExecutorService executor;
-        private int invocation;
-        private int maxRetries;
-        private int retryBackoff;
-        private File callbackFile;
-
-        @Override
-        public void run() {
-            LOG.debug("CallbackHandler.run()");
-            boolean delete = false;
-            try {
-                Callback callback = readCallback();
-                URI uri = URI.create(callback.url);
-                HttpContext context = createHttpContext(uri, callback.authentication);
-                HttpEntity content = new StringEntity((String) callback.data, ContentType.APPLICATION_JSON);
-                HttpPost post = new HttpPost(uri);
-                post.setConfig(REQUEST_CONFIG);
-                post.addHeader(RPS_TRACEID_HEADER, callback.traceId);
-                post.setEntity(content);
-
-                try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-                    HttpResponse response = client.execute(post, context);
-                    int status = response.getStatusLine().getStatusCode();
-                    if (status >= 200 && status < 300) {
-                        // in case of success, just print the status line
-                        LOG.info("post to '{}' succeeded: response: {}", uri, response.getStatusLine());
-                        delete = true;
-                    } else {
-                        delete = rescheduleIfApplicable();
-                        if (delete) {
-                            String retryInfo = "";
-                            if (maxRetries > 0) {
-                                retryInfo = " after " + maxRetries + " attempts";
-                            }
-                            LOG.warn("post to '{}' failed{}: response: {}\n{}",
-                                    uri, retryInfo, response.getStatusLine(), readEntity(response.getEntity()));
-                        } else {
-                            LOG.info("post to '{}' will be retried : response: {}\n{}",
-                                    uri, response.getStatusLine(), readEntity(response.getEntity()));
-                        }
-                    }
-                } catch (Exception e) {
-                    // in failure case print request body and exception
-                    delete = rescheduleIfApplicable();
-                    if (delete) {
-                        String retryInfo = "";
-                        if (invocation > 1) {
-                            retryInfo = " after " + invocation + " attempts";
-                        }
-                        LOG.error("post to '{}' errored{}\ncontent {}\n{}", uri, retryInfo, content,
-                                readEntity(content),
-                                e);
-                    } else {
-                        LOG.warn("post to '{}' will be retried\ncontent {}\n{}", uri, content, readEntity(content), e);
-                    }
-
-                }
-            } catch (Exception e) {
-                delete = true;
-                LOG.error("unable to create http post", e);
-            } finally {
-                if (delete) {
-                    try {
-                        Files.deleteIfExists(callbackFile.toPath());
-                    } catch (IOException e) {
-                        LOG.error("unable to delete callback definition file", e);
-                    }
-                }
-            }
-        }
-
-        private boolean rescheduleIfApplicable() {
-            invocation++;
-            if (invocation <= maxRetries) {
-                executor.schedule(this, retryBackoff * invocation, TimeUnit.MILLISECONDS);
-                return false;
-            }
-            return true;
-        }
-
-        private Callback readCallback() {
-            try {
-                String jsonContent = new String(Files.readAllBytes(callbackFile.toPath()), StandardCharsets.UTF_8);
-                return Json.read(jsonContent, Callback.class);
-            } catch (IOException e) {
-                throw new IllegalStateException("Unable to read callback content from file system", e);
-            }
-        }
-
-        private String readEntity(HttpEntity entity) {
-            String result = null;
-            if (entity != null) {
-                try {
-                    result = EntityUtils.toString(entity);
-                } catch (ParseException | IOException e) {
-                    /* ignored */
-                }
-            }
-            return result;
-        }
-
-        private HttpContext createHttpContext(URI uri, Authentication authentication) {
-            if (authentication == null) {
-                return null;
-            }
-
-            CredentialsProvider credentialsProvider = null;
-            switch (authentication.getType()) {
-                case BASIC:
-                    credentialsProvider = new BasicCredentialsProvider();
-                    credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(
-                            authentication.getUsername(), authentication.getPassword()));
-                    break;
-                default:
-                    throw new IllegalStateException("Unsupported type '" + authentication.getType() + "'");
-            }
-            HttpHost host = URIUtils.extractHost(uri);
-            AuthCache authCache = new BasicAuthCache();
-            authCache.put(host, new BasicScheme());
-            HttpClientContext context = HttpClientContext.create();
-            context.setCredentialsProvider(credentialsProvider);
-            context.setAuthCache(authCache);
-            return context;
-        }
-
-        private static Runnable of(ScheduledExecutorService executor, int maxRetries, int retryBackoff,
-                File callbackFile) {
-            CallbackHandler result = new CallbackHandler();
-            result.maxRetries = maxRetries;
-            result.retryBackoff = retryBackoff;
-            result.executor = executor;
-            result.callbackFile = callbackFile;
             return result;
         }
     }

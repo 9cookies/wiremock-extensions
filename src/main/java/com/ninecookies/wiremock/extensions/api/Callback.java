@@ -21,21 +21,38 @@ public class Callback {
      * The destination URL to POST the {@link #data} to after {@link #delay} has elapsed.
      */
     public String url;
-
+    /**
+     * The destination QUEUE to send the {@link #data} to after {@link #delay} has elapsed.
+     */
+    public String queue;
     /**
      * The authentication to use for the callback.
      */
     public Authentication authentication;
-
     /**
      * The request id to use for the callback.
      */
     public String traceId;
-
     /**
      * The object representing arbitrary callback data.
      */
     public Object data;
+
+    /**
+     * Create a new instance for an SQS message {@link Callback} definition.
+     *
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param queue the destination queue name to send the message to.
+     * @param message the message to send.
+     * @return a new {@link Callback} instance ready to use.
+     */
+    public static Callback ofQueueMessage(int delay, String queue, Object message) {
+        Callback result = new Callback();
+        result.delay = delay;
+        result.queue = queue;
+        result.data = message;
+        return result;
+    }
 
     /**
      * Creates a new instance for a {@link Callback} definition.

@@ -61,7 +61,7 @@ e.g. in a pom.xml file for integration tests
         <skip>${skipITs}</skip>
         <images>
             <image>
-            	<name>123456789.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack:2.22.0-0.0.5</name>
+            	<name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-wiremock</name>
             	<run>
             		<ports>
             			<port>${docker.wiremock.port}:8080</port>
@@ -106,4 +106,99 @@ e.g. in a pom.xml file for integration tests
     </executions>
 </plugin>
 
+```
+
+When used for integration testing with SQS message publishing to an Amazon SQS-compatible interface provided through another docker container the other and the wiremock container must share a network for a proper resolution of `getQueueUrl()` results.
+
+The example below shows the maven docker configuration to use wiremock container alongside the fully functional local
+AWS cloud stack (localstack) container with SQS enabled.
+
+> :bulb: the wiremock port is exposed on the localstack container and the wiremock container configured its network.
+
+```xml
+<plugin>
+    <groupId>io.fabric8</groupId>
+    <artifactId>docker-maven-plugin</artifactId>
+    <version>0.27.2</version>
+    <configuration>
+        <skip>${skipITs}</skip>
+        <images>
+            <image>
+                <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack</name>
+                <run>
+                    <!-- note the wiremock port is exposed on this container -->
+                    <ports>
+                        <port>${sqs.port}:4576</port>
+                        <port>8081:8080</port>
+                        <port>${wiremock.port}:8090</port>
+                    </ports>
+                    <wait>
+                        <tcp>
+                            <host>127.0.0.1</host>
+                            <ports>
+                                <port>4576</port>
+                                <port>8080</port>
+                                <port>8090</port>
+                            </ports>
+                        </tcp>
+                        <log>initialization finished successfully</log>
+                        <time>60000</time>
+                    </wait>
+                    <env>
+                        <SERVICES>sqs</SERVICES>
+                    </env>
+                    <volumes>
+                        <bind>
+                            <volume>${docker.resources.localstack}/init.sh:/docker-entrypoint-initaws.d/init.sh</volume>
+                        </bind>
+                    </volumes>
+                </run>
+            </image>
+            <image>
+                <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-wiremock</name>
+                <run>
+                    <!-- note wiremock uses the localstack network -->
+                    <network>
+                        <mode>container</mode>
+                        <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack</name>
+                    </network>
+                    <!-- note wiremock uses port 8090 as default port occupied by localstack dashboard -->
+                    <cmd>--port 8090</cmd>
+                    <env>
+                        <MAX_RETRIES>3</MAX_RETRIES>
+                        <RETRY_BACKOFF>500</RETRY_BACKOFF>
+                        <!-- note wiremock defines the localstack SQS messaging port - not the mapped port -->
+                        <MESSAGING_SQS_ENDPOINT>http://localhost:4576</MESSAGING_SQS_ENDPOINT>
+                        <AWS_REGION>us-east-1</AWS_REGION>
+                        <AWS_ACCESS_KEY_ID>X</AWS_ACCESS_KEY_ID>
+                        <AWS_SECRET_ACCESS_KEY>X</AWS_SECRET_ACCESS_KEY>
+                    </env>
+                    <volumes>
+                        <bind>
+                            <volume>${docker.wiremock.resources}/__files:/home/wiremock/__files</volume>
+                            <volume>${docker.wiremock.resources}/mappings:/home/wiremock/mappings</volume>
+                        </bind>
+                    </volumes>
+                </run>
+            </image>
+        </images>
+    </configuration>
+    <executions>
+        <execution>
+            <id>start</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+                <goal>build</goal>
+                <goal>start</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>stop</id>
+            <phase>post-integration-test</phase>
+            <goals>
+                <goal>stop</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
 ```
