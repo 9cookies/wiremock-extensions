@@ -35,49 +35,33 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * Implements the {@link PostServeAction} interface and provides the ability to specify callback invocations for request
  * mappings.
  * <p>
- * This class utilizes the {@link ScheduledExecutorService} and configures it with a core pool size of
- * {@value #CORE_POOL_SIZE} and a {@link ThreadFactory} that produces daemon {@link Thread}s.
+ * This class utilizes the {@link ScheduledExecutorService} and configures it to use a {@link ThreadFactory} that
+ * produces daemon {@link Thread}s.
  *
  * @author M.Scheepers
  * @since 0.0.6
+ * @see CallbackConfiguration
  */
 public class CallbackSimulator extends PostServeAction {
 
     private static final Logger LOG = LoggerFactory.getLogger(CallbackSimulator.class);
-    private static final int CORE_POOL_SIZE = 50;
-    private static final int DEFAULT_RETRY_BACKOFF = 5_000;
-    private static final int DEFAULT_MAX_RETRIES = 0;
     private static int instances = 0;
     private final long instance = ++instances;
     private final int retryBackoff;
     private final int maxRetries;
+    private final boolean messagingEnabled;
 
     private final ScheduledExecutorService executor;
 
     public CallbackSimulator() {
-        int corePoolSize = parseEnvironmentSetting("SCHEDULED_THREAD_POOL_SIZE", CORE_POOL_SIZE);
-        // ensure minimum default thread pool size
-        if (corePoolSize < CORE_POOL_SIZE) {
-            corePoolSize = CORE_POOL_SIZE;
-        }
-        retryBackoff = parseEnvironmentSetting("RETRY_BACKOFF", DEFAULT_RETRY_BACKOFF);
-        maxRetries = parseEnvironmentSetting("MAX_RETRIES", DEFAULT_MAX_RETRIES);
+        CallbackConfiguration config = CallbackConfiguration.getInstance();
+        int corePoolSize = config.getCorePoolSize();
+        retryBackoff = config.getRetryBackoff();
+        maxRetries = config.getMaxRetries();
+        messagingEnabled = config.isSqsMessagingEnabled();
         LOG.info("instance: {} - using SCHEDULED_THREAD_POOL_SIZE {} - RETRY_BACKOFF {} - MAX_RETRIES {}",
                 instance, corePoolSize, retryBackoff, maxRetries);
         executor = Executors.newScheduledThreadPool(corePoolSize, new DaemonThreadFactory());
-    }
-
-    private int parseEnvironmentSetting(String name, int defaultValue) {
-        int result = defaultValue;
-        try {
-            String poolSizeEnv = System.getenv(name);
-            if (poolSizeEnv != null) {
-                result = Integer.parseInt(poolSizeEnv);
-            }
-        } catch (Exception e) {
-            LOG.error("unable to read environment variable '{}'", name, e);
-        }
-        return result;
     }
 
     @Override
@@ -111,6 +95,11 @@ public class CallbackSimulator extends PostServeAction {
     }
 
     private void scheduleSqsCallback(DocumentContext servedJson, SqsCallback callback) {
+        if (!messagingEnabled) {
+            LOG.warn("instance {} - sqs callbacks disabled - ignore task to: '{} with delay '{}' and data '{}'",
+                    instance, callback.queue, callback.delay, callback.data);
+            return;
+        }
         // normalize callback
         callback.queue = Placeholders.transformValue(callback.queue);
         callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));

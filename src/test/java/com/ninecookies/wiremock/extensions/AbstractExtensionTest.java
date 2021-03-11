@@ -17,7 +17,7 @@ import com.ninecookies.wiremock.extensions.util.SystemUtil;
 
 public class AbstractExtensionTest {
 
-    private static final int SQS_PORT = 1060;
+    private static final int SQS_PORT = 9060;
     private SQSRestServer sqsServer;
     protected AmazonSQS sqsClient;
 
@@ -31,7 +31,7 @@ public class AbstractExtensionTest {
         SystemUtil.setenv("CBUSER", "callback-user");
         SystemUtil.setenv("CBPASS", "callback-pass");
         SystemUtil.setenv("CALLBACK_QUEUE", "test-queue-name");
-        SystemUtil.setenv("MESSAGING_SQS_ENDPOINT", "http://localhost:" + SQS_PORT);
+        SystemUtil.setenv("AWS_SQS_ENDPOINT", "http://localhost:" + SQS_PORT);
         SystemUtil.setenv("AWS_REGION", "us-east-1");
 
         sqsServer = SQSRestServerBuilder
@@ -39,7 +39,7 @@ public class AbstractExtensionTest {
                 .start();
 
         sqsClient = AmazonSQSClientBuilder.standard()
-                .withEndpointConfiguration(new EndpointConfiguration("http://localhost:1060", "us-east-1"))
+                .withEndpointConfiguration(new EndpointConfiguration("http://localhost:" + SQS_PORT, "us-east-1"))
                 .build();
         sqsClient.createQueue("test-queue-name");
 
