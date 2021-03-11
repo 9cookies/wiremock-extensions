@@ -96,7 +96,7 @@ public class CallbackSimulator extends PostServeAction {
 
     private void scheduleSqsCallback(DocumentContext servedJson, SqsCallback callback) {
         if (!messagingEnabled) {
-            LOG.warn("instance {} - sqs callbacks disabled - ignore task to: '{} with delay '{}' and data '{}'",
+            LOG.warn("instance {} - sqs callbacks disabled - ignore task to: '{}' with delay '{}' and data '{}'",
                     instance, callback.queue, callback.delay, callback.data);
             return;
         }
