@@ -34,16 +34,16 @@ public class Callback {
      */
     public String traceId;
     /**
-     * The object representing arbitrary callback data.
+     * The JSON object representing arbitrary callback data.
      */
     public Object data;
 
     /**
      * Create a new instance for an SQS message {@link Callback} definition.
      *
-     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param delay the period of time in milliseconds to wait before the callback data published.
      * @param queue the destination queue name to send the message to.
-     * @param message the message to send.
+     * @param message an arbitrary JSON object representing the message to send.
      * @return a new {@link Callback} instance ready to use.
      */
     public static Callback ofQueueMessage(int delay, String queue, Object message) {
@@ -59,7 +59,7 @@ public class Callback {
      *
      * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
      * @param url the destination URL for the callback's POST data.
-     * @param data the callback data to POST.
+     * @param data an arbitrary JSON object representing the callback data to POST.
      * @return a new {@link Callback} instance ready to use.
      */
     public static Callback of(int delay, String url, Object data) {
@@ -73,7 +73,7 @@ public class Callback {
      * @param url the destination URL for the callback's POST data.
      * @param username the user name for the callback authentication.
      * @param password the password for the callback authentication.
-     * @param data the callback data to POST.
+     * @param data an arbitrary JSON object representing the callback data to POST.
      * @return a new {@link Callback} instance ready to use.
      */
     public static Callback of(int delay, String url, String username, String password, Object data) {
@@ -88,7 +88,7 @@ public class Callback {
      * @param username the user name for the callback authentication.
      * @param password the password for the callback authentication.
      * @param traceId the trace / request identifier to use for the callback.
-     * @param data the callback data to POST.
+     * @param data an arbitrary JSON object representing the callback data to POST.
      * @return a new {@link Callback} instance ready to use.
      */
     public static Callback of(int delay, String url, String username, String password, String traceId, Object data) {
