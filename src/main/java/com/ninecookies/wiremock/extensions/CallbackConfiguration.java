@@ -132,9 +132,7 @@ public class CallbackConfiguration {
         if (!isSqsMessagingEnabled()) {
             return null;
         }
-        return new SQSConnectionFactory(
-                new ProviderConfiguration(),
-                clientBuilder.build());
+        return new SQSConnectionFactory(new ProviderConfiguration(), clientBuilder.build());
     }
 
     /**
