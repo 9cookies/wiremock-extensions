@@ -43,7 +43,7 @@ public class SqsCallbackHandler implements Runnable {
 
     @Override
     public void run() {
-        try (MessagePublisher publisher = MessagePublisher.standard().build()) {
+        try (MessagePublisher publisher = new MessagePublisher()) {
             SqsCallback callback = readCallback();
 
             String message;
