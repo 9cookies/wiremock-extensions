@@ -12,6 +12,13 @@
 	<description>Provides wiremock extensions for dynamic mocking of JSON responses.</description>
 
 	<properties>
+        <skipBuild>${skipAll}</skipBuild>
+	    <skipPush>${skipAll}</skipPush>
+	    <skipTests>${skipAll}</skipTests>
+	    <skipITs>${skipTests}</skipITs>
+	    <skipDownload>${skipBuild}</skipDownload>
+	    <skipAssembly>${skipBuild}</skipAssembly>
+
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
@@ -29,6 +36,8 @@
 		<testng.version>6.14.3</testng.version>
 		<assertj.version>3.8.0</assertj.version>
 		<restassured.version>2.9.0</restassured.version>
+		<docker.resources>${project.basedir}/src/main/resources/docker</docker.resources>
+		<docker.test.resources>${project.basedir}/src/test/resources</docker.test.resources>
 	</properties>
 
 	<scm>
@@ -143,11 +152,269 @@
 				<directory>src/main/resources</directory>
 				<filtering>false</filtering>
 				<excludes>
-					<exclude>*</exclude>
+					<exclude>ide/</exclude>
+					<exclude>docker/**</exclude>
 				</excludes>
 			</resource>
 		</resources>
 		<plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <id>enforce-maven</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[3.2.5,)</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>${java.version}</version>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.2</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12.4</version>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.22.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+				<groupId>com.googlecode.maven-download-plugin</groupId>
+				<artifactId>download-maven-plugin</artifactId>
+				<version>1.6.1</version>
+				<executions>
+					<execution>
+						<id>wiremock-standalone</id>
+						<!-- during package we build the docker image thus we need the wiremock standalone jar -->
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>wget</goal>
+						</goals>
+						<configuration>
+						    <skip>${skipDownload}</skip>
+							<url>https://repo1.maven.org/maven2/com/github/tomakehurst/wiremock-standalone/${wiremock.version}/wiremock-standalone-${wiremock.version}.jar</url>
+							<outputDirectory>${project.build.directory}</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- assemble jar including dependencies -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<finalName>${project.artifactId}-${project.version}</finalName>
+				</configuration>
+				<executions>
+					<execution>
+						<id>assemble-jar-with-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.28.0</version>
+				<configuration>
+				    <!-- uncomment the next line to debug the docker images
+					<showLogs>softwaremill/elasticmq-native,deliveryhero/rps-wiremock</showLogs>
+					-->
+					<!-- explicit definition required -->
+					<skipBuild>${skipBuild}</skipBuild>
+					<images>
+					   <image>
+                            <alias>sqs-messaging</alias>
+                            <name>softwaremill/elasticmq-native</name>
+                            <run>
+                                <ports>
+	                                <!-- elasticmq sqs -->
+	                                <port>9324:9324</port>
+                                    <!-- elasticmq UI -->
+                                    <port>9091:9325</port>
+	                                <!-- wiremock -->
+	                                <port>9090:9090</port>
+                                </ports>
+                                <wait>
+                                    <tcp>
+                                        <host>127.0.0.1</host>
+                                        <ports>
+                                            <port>9324</port>
+                                            <port>9325</port>
+                                            <port>9090</port>
+                                        </ports>
+                                    </tcp>
+                                </wait>
+                                <volumes>
+                                    <bind>
+                                        <volume>${docker.test.resources}/elasticmq/queue.conf:/opt/elasticmq.conf</volume>
+                                    </bind>
+                                </volumes>
+                            </run>
+                        </image>
+						<image>
+							<registry>940776968316.dkr.ecr.eu-west-1.amazonaws.com</registry>
+							<name>deliveryhero/rps-wiremock</name>
+							<build>
+								<nocache>true</nocache>
+								<assembly>
+									<targetDir>/</targetDir>
+									<inline>
+										<files>
+											<file>
+												<source>${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar</source>
+												<outputDirectory>var/wiremock/lib</outputDirectory>
+												<destName>${project.artifactId}.jar</destName>
+											</file>
+											<file>
+												<source>${project.build.directory}/wiremock-standalone-${wiremock.version}.jar</source>
+												<outputDirectory>/var/wiremock/lib</outputDirectory>
+												<destName>wiremock-standalone.jar</destName>
+											</file>
+											<file>
+												<source>${docker.resources}/log4j2.xml</source>
+												<outputDirectory>/var/wiremock/lib</outputDirectory>
+												<destName>log4j2.xml</destName>
+											</file>
+											<file>
+												<source>${docker.resources}/docker-entrypoint.sh</source>
+											</file>
+										</files>
+									</inline>
+								</assembly>
+								<from>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-base-java:jdk-8.181</from>
+								<runCmds>
+									<runCmd>apk add --update --no-cache openssl 'su-exec>=0.2' bash curl jq</runCmd>
+									<runCmd>mkdir -p /var/wiremock/lib/</runCmd>
+								</runCmds>
+								<workdir>/home/wiremock</workdir>
+								<volumes>
+									<volume>/home/wiremock</volume>
+								</volumes>
+								<ports>
+									<port>8080</port>
+									<port>8443</port>
+									<port>7091</port>
+								</ports>
+								<entryPoint>["/docker-entrypoint.sh"]</entryPoint>
+								<cmd>["--disable-banner"]</cmd>
+								<tags>
+									<tag>${wiremock.version}-${project.version}</tag>
+								</tags>
+							</build>
+							<run>
+							    <env>
+                                    <MAX_RETRIES>3</MAX_RETRIES>
+                                    <RETRY_BACKOFF>500</RETRY_BACKOFF>
+                                    <AWS_REGION>us-east-1</AWS_REGION>
+                                    <AWS_ACCESS_KEY_ID>X</AWS_ACCESS_KEY_ID>
+                                    <AWS_SECRET_ACCESS_KEY>X</AWS_SECRET_ACCESS_KEY>
+                                    <AWS_SQS_ENDPOINT>http://localhost:9324</AWS_SQS_ENDPOINT>
+                                    <CALLBACK_QUEUE>test-queue-name</CALLBACK_QUEUE>
+                                </env>
+                                <network>
+                                    <mode>container</mode>
+                                    <name>softwaremill/elasticmq-native</name>
+                                </network>
+                                <cmd>--port 9090</cmd>
+                                <volumes>
+                                    <bind>
+                                        <volume>${docker.test.resources}/__files:/home/wiremock/__files</volume>
+                                        <volume>${docker.test.resources}/mappings:/home/wiremock/mappings</volume>
+                                    </bind>
+                                </volumes>
+							</run>
+						</image>
+					</images>
+				</configuration>
+                <executions>
+                    <!--
+                        explicitly bind docker:build goal to package phase 
+                        see https://dmp.fabric8.io/#build-assembly-descriptor
+                    -->
+                    <execution>
+                        <id>docker-build</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>docker-push</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                          <skip>${skipITs}</skip>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipITs}</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+			</plugin>
 			<plugin>
 				<groupId>com.github.github</groupId>
 				<artifactId>site-maven-plugin</artifactId>
@@ -174,62 +441,6 @@
 							<goal>site</goal>
 						</goals>
 						<phase>deploy</phase>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-enforcer-plugin</artifactId>
-				<version>1.4</version>
-				<executions>
-					<execution>
-						<id>enforce-maven</id>
-						<goals>
-							<goal>enforce</goal>
-						</goals>
-						<configuration>
-							<rules>
-								<requireMavenVersion>
-									<version>[3.2.5,)</version>
-								</requireMavenVersion>
-								<requireJavaVersion>
-									<version>${java.version}</version>
-								</requireJavaVersion>
-							</rules>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.2</version>
-				<configuration>
-					<source>${java.version}</source>
-					<target>${java.version}</target>
-				</configuration>
-			</plugin>
-			<!-- assemble jar including dependencies -->
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<addClasspath>true</addClasspath>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-					<finalName>${project.artifactId}-${project.version}</finalName>
-				</configuration>
-				<executions>
-					<execution>
-						<id>assemble-jar-with-dependencies</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
 					</execution>
 				</executions>
 			</plugin>

@@ -4,7 +4,6 @@
 
 This extension is not hosted on Maven central but on github. To use this artifact add the following repository definition either to your maven `settings.xml` or to the `pom.xml` file of your project that makes use of WireMock.
 
-
 ```XML
 <repositories>
     <repository>
@@ -62,6 +61,7 @@ If you are using the [WireMock Maven Plugin](https://github.com/automatictester/
 ```
 
 In the `wiremock-maven-plugin` the add the dependency and register the provided extensions like so:
+
 ```XML
 <build>
     <plugins>
@@ -104,6 +104,7 @@ In the `wiremock-maven-plugin` the add the dependency and register the provided 
 As WireMock supports running as a [standalone process](http://wiremock.org/docs/running-standalone/) there is also a [standalone version](https://raw.github.com/9cookies/mvn-repo/master/releases/com/ninecookies/wiremock/extensions/wiremock-extensions/0.0.6/wiremock-extensions-0.0.6-jar-with-dependencies.jar) of the wiremock-extensions available that embeds its dependencies.
 
 Start WireMock as standalone process with JsonBodyTransformer and CallbackSimulater enabled as follows
+
 ```
 $ java -cp wiremock-standalone-2.22.0.jar;wiremock-extensions-0.0.7-jar-with-dependencies.jar com.github.tomakehurst.wiremock.standalone.WireMockServerRunner --verbose --extensions com.ninecookies.wiremock.extensions.JsonBodyTransformer,com.ninecookies.wiremock.extensions.CallbackSimulator,com.ninecookies.wiremock.extensions.RequestMatcherExtension
 ```

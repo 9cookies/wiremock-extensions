@@ -1,29 +1,20 @@
 # WireMock docker Image
-========================
 
 This image is based on our base Linux image providing Java JDK 1.8.181 and contains [Wiremock](http://wiremock.org/docs)
 extended with our [JSON body transformer](https://github.com/9cookies/wiremock-extensions/tree/dev/json-body-transformer).
 
 # How to build this image
 
-The dockerfile defines two variables e.g. the `WIREMOCK_VERSION` (defaults to 2.22.0) and the `EXTENSION_VERSION` (defaults to 0.0.5) 
+To build the image locally run:
 
 ```bash
-# build with default versions
-$ docker build \
-    --tag xxx .
+$ mvn clean package
+```
 
-# build with specific versions
-$ docker build \
-    --build-arg WIREMOCK_VERSION=x.x.x
-    --build-arg EXTENSION_VERSION=x.x.x
-    --tag xxx .
+To push the image run:
 
-# example
-$ docker build \
-    --build-arg WIREMOCK_VERSION=2.22.0
-    --build-arg EXTENSION_VERSION=0.0.5
-    --tag 940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-wiremock:2.22.0-0.0.5
+```bash
+$ mvn clean deploy
 ```
 
 # Provided features
@@ -32,10 +23,10 @@ It is possible to add predefined JSON stubs and response files by mounting the d
 
 ```bash
 # example
-$ docker run \
+$ docker run -p 8080:8080 \
     -v /path/to/external/mappings:/home/wiremock/mappings \
     -v /path/to/external/__files:/home/wiremock/__files \
-    ...
+    deliveryhero/rps-wiremock:latest
 ```
 
 Beside that it is also possible to further extend wiremock as described in the [Wiremock - Running as Standalone Process](http://wiremock.org/docs/running-standalone/) by mounting a directory containing the extension jar like so:
@@ -44,7 +35,7 @@ Beside that it is also possible to further extend wiremock as described in the [
 #example
 $ docker run \
     -v /path/to/external/extensions:/var/wiremock/extensions \
-    ...
+    deliveryhero/rps-wiremock:latest
     --extensions custom.wiremock.ExtensionClassName
 ```
 

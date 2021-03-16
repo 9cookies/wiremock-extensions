@@ -74,6 +74,19 @@ public class JsonBodyTransformerTest extends AbstractExtensionTest {
     }
 
     @Test
+    public void testTransformArrayElement() {
+        String url = "/stub/array";
+        String requestBody = "{\"list\": [{\"item\":\"item-0\"},{\"item\":\"item-1\"}]}";
+        String responseBody = "{\"name\": \"$(list[1].item)\"}";
+
+        stubFor(post(urlEqualTo(url)).willReturn(aResponse().withStatus(200)
+                .withHeader("content-type", CONTENT_TYPE).withBody(responseBody).withTransformers(BODY_TRANSFORMER)));
+
+        Response response = given().contentType(CONTENT_TYPE).body(requestBody).when().post(url);
+        response.then().statusCode(200).body("name", equalTo("item-1"));
+    }
+
+    @Test
     public void transformBodyStubbing() {
         String url = "/stub/response";
 
