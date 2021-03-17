@@ -25,34 +25,6 @@ public class Placeholder {
         this.placeholder = normalize(pattern);
     }
 
-    private String jsonPath() {
-        // change $( to $. and remove trailing )
-        return placeholder.replaceFirst("\\$\\(", "\\$\\.")
-                .substring(0, placeholder.length() - 1);
-    }
-
-    private String normalize(String pattern) {
-        Matcher placeholder = PLACEHOLDER_PATTERN.matcher(pattern);
-        if (placeholder.find()) {
-            return placeholder.group();
-        }
-        return pattern;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString() {
-        return new StringBuilder("Placeholder[")
-                .append("pattern=").append(pattern)
-                .append(", placeholder=").append(placeholder)
-                .append("]")
-                .toString();
-    }
-
     /**
      * Gets the patter as specified during construction.
      *
@@ -114,6 +86,15 @@ public class Placeholder {
         return pattern.replace(placeholder, value);
     }
 
+    @Override
+    public String toString() {
+        return new StringBuilder("Placeholder[")
+                .append("pattern=").append(pattern)
+                .append(", placeholder=").append(placeholder)
+                .append("]")
+                .toString();
+    }
+
     /**
      * Indicates whether the specified {@code string} is or contains a placeholder.
      *
@@ -143,6 +124,20 @@ public class Placeholder {
         }
         if (!containsPattern(pattern)) {
             throw new IllegalArgumentException("pattern '" + pattern + "' is no placeholder pattern");
+        }
+        return pattern;
+    }
+
+    private String jsonPath() {
+        // change $( to $. and remove trailing )
+        return placeholder.replaceFirst("\\$\\(", "\\$\\.")
+                .substring(0, placeholder.length() - 1);
+    }
+
+    private String normalize(String pattern) {
+        Matcher placeholder = PLACEHOLDER_PATTERN.matcher(pattern);
+        if (placeholder.find()) {
+            return placeholder.group();
         }
         return pattern;
     }

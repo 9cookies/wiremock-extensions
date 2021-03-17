@@ -53,16 +53,38 @@ public class Placeholders {
             .options(Option.DEFAULT_PATH_LEAF_TO_NULL)
             .options(Option.SUPPRESS_EXCEPTIONS);
 
+    /**
+     * Replaces all placeholders in the specified <i>jsonToTransform</i> with the related values looked up in the
+     * specified <i>placeholderSource</i>.
+     *
+     * @param placeholderSource the placeholder source JSON string to look up values.
+     * @param jsonToTransform the template JSON string containing the placeholders.
+     * @return the JSON result of the template with placeholders replaced by their related values.
+     */
     public static String transformJson(String placeholderSource, String jsonToTransform) {
         return transformJson(documentContextOf(placeholderSource), jsonToTransform);
     }
 
+    /**
+     * Replaces all placeholders in the specified <i>jsonToTransform</i> with the related values looked up in the
+     * specified <i>placeholderSource</i>.
+     *
+     * @param placeholderSource the placeholder source {@link DocumentContext}to look up values.
+     * @param jsonToTransform the template JSON string containing the placeholders.
+     * @return the JSON result of the template with placeholders replaced by their related values.
+     */
     public static String transformJson(DocumentContext placeholderSource, String jsonToTransform) {
         Map<String, Object> responsePlaceholders = Placeholders.parseJsonBody(jsonToTransform);
         Placeholders.parsePlaceholderValues(responsePlaceholders, placeholderSource);
         return Placeholders.replaceValuesInJson(responsePlaceholders, jsonToTransform);
     }
 
+    /**
+     * Splits the specified <i>url</i> by {@code /} and returns a list of URL parts.
+     *
+     * @param url the {@link String} URL to split.
+     * @return a {@link List} of URL parts.
+     */
     public static List<String> splitUrl(String url) {
         return Stream.of(url.split("/"))
                 .filter(s -> !Strings.isNullOrEmpty(s))
@@ -108,27 +130,6 @@ public class Placeholders {
             placeholders.put(placeholder, populatePlaceholder(placeholder, placeholderSource));
         }
         return replaceValuesInUrl(placeholders, urlToTransform);
-    }
-
-    private static String replaceValuesInUrl(Map<String, Object> placeholders, String urlToTransform) {
-        for (String key : placeholders.keySet()) {
-            String value = String.valueOf(placeholders.get(key));
-            int queryStringStart = urlToTransform.indexOf('?');
-            int keyStart = urlToTransform.indexOf(key);
-            if (queryStringStart > 0 && keyStart > queryStringStart) {
-                value = encodeValue(value);
-            }
-            urlToTransform = urlToTransform.replace(key, value);
-        }
-        return urlToTransform;
-    }
-
-    private static String encodeValue(String value) {
-        try {
-            return URLEncoder.encode(value, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     /**
@@ -222,6 +223,27 @@ public class Placeholders {
         }
         LOG.debug("populatePlaceholder('{}', '{}') -> '{}'", pattern, describe(documentContext), describe(result));
         return result;
+    }
+
+    private static String replaceValuesInUrl(Map<String, Object> placeholders, String urlToTransform) {
+        for (String key : placeholders.keySet()) {
+            String value = String.valueOf(placeholders.get(key));
+            int queryStringStart = urlToTransform.indexOf('?');
+            int keyStart = urlToTransform.indexOf(key);
+            if (queryStringStart > 0 && keyStart > queryStringStart) {
+                value = encodeValue(value);
+            }
+            urlToTransform = urlToTransform.replace(key, value);
+        }
+        return urlToTransform;
+    }
+
+    private static String encodeValue(String value) {
+        try {
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     // visible for testing
@@ -321,6 +343,10 @@ public class Placeholders {
         }
     }
 
+    /**
+     * Protected constructor that avoids that new instances of this utility class are accidentally created but still
+     * allows this utility class to be inherited and enhanced.
+     */
     protected Placeholders() {
     }
 }
