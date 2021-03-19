@@ -254,6 +254,8 @@ public class Placeholders {
         public abstract Object value(String arguments);
 
         private static final Random RANDOM_GENERATOR = new Random();
+        static final Pattern HAS_BOUNDS = Pattern
+                .compile("\\[([\\+0-9 ]+)\\]|\\[([\\-\\+0-9 ]+),([\\-\\+0-9 ]+)\\]");
         private static final Pattern IS_CALCULATED = Pattern.compile("\\.plus\\[([HhMmSs]{1})([0-9\\-\\+]+)\\]");
         private static final Pattern HAS_ARGUMENT = Pattern.compile("\\[([A-Z_]+)\\]");
 
@@ -301,9 +303,33 @@ public class Placeholders {
             return System.getenv(envKey);
         };
 
+        private static final Function<String, Integer> RANDOM_PROVIDER = s -> {
+            Matcher argument = HAS_BOUNDS.matcher(s);
+            if (argument.find()) {
+                if (argument.group(1) != null) {
+                    // only max provided
+                    // Note: nextInt(bound) : the upper bound (exclusive). Must be positive.
+                    int max = Integer.parseInt(argument.group(1).trim()) + 1;
+                    return RANDOM_GENERATOR.nextInt(max);
+                }
+                // must be min and max provided otherwise
+                int min = Integer.parseInt(argument.group(2).trim());
+                int max = Integer.parseInt(argument.group(3).trim());
+                if (min > max) {
+                    throw new IllegalArgumentException("invalid bounds: min '" + min + "' >= max '" + max + "'");
+                }
+                return RANDOM_GENERATOR.nextInt((max + 1) - min) + min;
+            }
+            // something invalid provided
+            if (s.contains("[")) {
+                throw new IllegalArgumentException("invalid arguments for $(!Random): " + s);
+            }
+            return RANDOM_GENERATOR.nextInt();
+        };
+
         private static final Keyword ENV = new SimpleKeyword("ENV", s -> ENVIRONMENT_PROVIDER.apply(s));
         private static final Keyword UUID = new SimpleKeyword("UUID", s -> java.util.UUID.randomUUID().toString());
-        private static final Keyword RANDOM = new SimpleKeyword("Random", s -> RANDOM_GENERATOR.nextInt());
+        private static final Keyword RANDOM = new SimpleKeyword("Random", s -> RANDOM_PROVIDER.apply(s));
         private static final Keyword INSTANT = new SimpleKeyword("Instant", s -> INSTANT_PROVIDER.apply(s).toString());
         private static final Keyword TIMESTAMP = new SimpleKeyword("Timestamp",
                 s -> INSTANT_PROVIDER.apply(s).toEpochMilli());

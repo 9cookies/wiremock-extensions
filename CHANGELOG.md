@@ -16,6 +16,7 @@ Author: M.Scheepers
 - Support for string embedded keyword usage.
 - Introduced new keyword `ENV` to provide access to environment variables.
     - Callback authentication properties may contain keywords.
+- Support `max` and optional `min` parameters for `Random` keyword.
 
 ### Fixes
 - Bug during callback handling where exceptions where swallowed without logging.
