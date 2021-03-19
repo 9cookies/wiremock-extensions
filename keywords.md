@@ -35,6 +35,17 @@ However, same suffixes result in same values for different properties. The follo
 }
 ```
 
+For the random integer it is also possible to specify a maximum or minimum and maximum value by providing integers. Spaces will be ignored. If only maximum is provided the value must be positive.
+```JSON
+{
+  "number_between_zero_and_10": "$(!Random[10])",
+  "number_between_10_and_100": "$(!Random[10,100])",
+  "number_between_15_and_30": "$(!Random[15, 30])",
+  "number_between_20_and_50": "$(!Random[20 , 50])",
+  "number_between_2_and_5": "$(!Random[2 ,5])"
+}
+```
+
 ### Instant, date time and time stamp calculation
 
 Generating current time stamp in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) UTC format for a response property

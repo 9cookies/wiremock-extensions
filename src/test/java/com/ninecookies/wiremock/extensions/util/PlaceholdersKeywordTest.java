@@ -86,9 +86,9 @@ public class PlaceholdersKeywordTest {
         assertNotNull(uuid);
     }
 
-    @Test
-    public void testRandomPattern() {
-        Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher("$(!Random)");
+    @Test(dataProvider = "randomPatternsAndFixtures")
+    public void testRandomPattern(String pattern, Integer min, Integer max) {
+        Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
         assertTrue(isKey.find());
 
         Keyword keyword = Keyword.of(isKey.group(1));
@@ -98,7 +98,54 @@ public class PlaceholdersKeywordTest {
         assertNotNull(value);
 
         Integer integer = Integer.valueOf(value.toString());
-        assertNotNull(integer);
+        if (min == null && max == null) {
+            assertNotNull(integer);
+        } else {
+            assertThat(integer).isBetween(min, max);
+        }
+    }
+
+    @DataProvider
+    private Object[][] randomPatternsAndFixtures() {
+        return new Object[][] {
+                { "$(!Random)", null, null },
+                { "$(!Random[5])", 0, 5 },
+                { "$(!Random[ 5])", 0, 5 },
+                { "$(!Random[5 ])", 0, 5 },
+                { "$(!Random[ 5 ])", 0, 5 },
+                { "$(!Random[10,15])", 10, 15 },
+                { "$(!Random[10 ,15])", 10, 15 },
+                { "$(!Random[10 , 15])", 10, 15 },
+                { "$(!Random.user)", null, null },
+                { "$(!Random[5].user)", 0, 5 },
+                { "$(!Random[-10,+15].user)", -10, +15 },
+                { "$(!Random[-10,-5])", -10, -5 },
+                { "$(!Random[-5,-5])", -5, -5 }
+        };
+    }
+
+    @Test(dataProvider = "invalidRandomPatterns")
+    public void testInvalidRandomPattern(String pattern) {
+        Matcher isKey = Placeholders.KEYWORD_PATTERN.matcher(pattern);
+        assertTrue(isKey.find());
+
+        Keyword keyword = Keyword.of(isKey.group(1));
+        assertNotNull(keyword);
+
+        assertThrows(IllegalArgumentException.class, () -> keyword.value(isKey.group(2)));
+    }
+
+    @DataProvider
+    private Object[][] invalidRandomPatterns() {
+        return new Object[][] {
+                { "$(!Random[])" },
+                { "$(!Random[-1])" },
+                { "$(!Random[a,b])" },
+                { "$(!Random[1,c])" },
+                { "$(!Random[d,2])" },
+                { "$(!Random[3,4,5])" },
+                { "$(!Random[7,6])" }
+        };
     }
 
     @Test(dataProvider = "offsetDateTimePatternsAndFixtures")
