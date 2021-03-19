@@ -10,10 +10,15 @@ The project is based on Java 8, uses Maven as build tool and provides extensions
 - Docker 1.6+
 
 ## Build
+Builds the project and makes the maven artifact and docker image available on a local machine.
 - Clone the `wiremock-extensions` project from git
 - Perform a `mvn clean install`
 - Wait for the build and tests to finish.
 
+## Deploy
+Builds and deploys the project and publishes the maven artifact to mvn-repo and the docker image to ECR repository.
+- Perform a `mvn clean deploy`
+- Wait for the build to finish
 
 ## Featured Keywords
 You can find further information in the [documentation](keywords.md).

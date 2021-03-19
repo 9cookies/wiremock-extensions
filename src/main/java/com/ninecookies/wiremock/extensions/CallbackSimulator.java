@@ -101,8 +101,15 @@ public class CallbackSimulator extends PostServeAction {
             return;
         }
         // normalize callback
+        String queue = callback.queue;
         callback.queue = Placeholders.transformValue(callback.queue);
         callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
+        // check for queue name String.valueOf((Object) null) as a result of transformValue()
+        if ("null".equals(callback.queue)) {
+            LOG.warn("instance {} - unresolvable SQS queue '{}' - ignore task to: '{}' with delay '{}' and data '{}'",
+                    instance, queue, callback.queue, callback.delay, callback.data);
+            return;
+        }
         File callbackDefinition = persistCallback(callback);
         LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
                 instance, callback.queue, callback.delay, callback.data);
