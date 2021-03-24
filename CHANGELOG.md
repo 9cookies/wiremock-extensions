@@ -6,13 +6,13 @@ Important Notes: - none
 
 Version: 0.2.1
 
-Author: - none
+Author: M.Scheepers
 
 ### Features
 - none
 
 ### Improvements
-- none
+- Support for multiple placeholders and keywords in SQS message callback queue names.
 
 ### Fixes
 - none

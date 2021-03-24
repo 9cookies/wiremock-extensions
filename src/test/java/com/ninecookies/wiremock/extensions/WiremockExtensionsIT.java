@@ -223,4 +223,39 @@ public class WiremockExtensionsIT {
                 .withRequestBody(matchingJsonPath("$.[?(@.request_code == 'request-code')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.data == 'url-data')]")));
     }
+
+    @Test
+    public void testSqsMessageCallbackWithRequestAndEnvQueueName() {
+        String requestUrl = "/request/sqs-env-queue/callback";
+        String requestBody = "{\"code\":\"request-code\",\"partial\":\"test\"}";
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+
+        Map<String, Object> sqsCallbackData = mapOf(entry("response_id", "$(response.id)"),
+                entry("data", "sqs-data"),
+                entry("request_code", "$(request.code)"),
+                entry("timestamp", "$(!Timestamp)"));
+
+        Callbacks callbacks = Callbacks.of(
+                Callback.ofQueueMessage(100, "$(request.partial)-$(!ENV[PARTIAL_QUEUE_NAME])", sqsCallbackData));
+
+        stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", callbacks)
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String responseId = Json.node(responseJson).get("id").textValue();
+        String messageText = queueMonitor.waitForMessage();
+        JsonNode message = Json.node(messageText);
+        assertEquals(message.get("response_id").textValue(), responseId);
+        assertEquals(message.get("request_code").textValue(), "request-code");
+        assertEquals(message.get("data").textValue(), "sqs-data");
+    }
 }

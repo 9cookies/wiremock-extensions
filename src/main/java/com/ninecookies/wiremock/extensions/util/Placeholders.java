@@ -111,6 +111,30 @@ public class Placeholders {
     }
 
     /**
+     * Replaces placeholders and keywords in the specified {@code value} by values found in the specified
+     * {@code placeholderSource}.
+     *
+     * @param placeholderSource
+     * @param value
+     * @return
+     */
+    public static String transformValue(DocumentContext placeholderSource, String value) {
+        Map<String, Object> placeholders = new LinkedHashMap<>();
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(value);
+        while (matcher.find()) {
+            String placeholder = matcher.group();
+            if (placeholders.containsKey(placeholder)) {
+                continue;
+            }
+            placeholders.put(placeholder, populatePlaceholder(placeholder, placeholderSource));
+        }
+        for (String key : placeholders.keySet()) {
+            value = value.replace(key, String.valueOf(placeholders.get(key)));
+        }
+        return value;
+    }
+
+    /**
      * Replaces placeholders and keywords in the specified {@code urlToTransform} by values found in the specified
      * {@code placeholderSource}. If the placeholder is contained in a query string part of the URL it's value will be
      * URL encoded.
