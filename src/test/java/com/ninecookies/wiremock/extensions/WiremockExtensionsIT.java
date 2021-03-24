@@ -41,7 +41,7 @@ import com.ninecookies.wiremock.extensions.util.SystemUtil;
 
 public class WiremockExtensionsIT {
 
-    private static final int SERVER_PORT = 9090;
+    private static final int SERVER_PORT = 1062;
     private static final String QUEUE_NAME = "test-queue-name";
 
     private SQSConnection connection;
@@ -50,7 +50,7 @@ public class WiremockExtensionsIT {
     @BeforeTest
     protected void beforeTest() {
         SystemUtil.setenv("AWS_REGION", "us-east-1");
-        SystemUtil.setenv("AWS_SQS_ENDPOINT", "http://localhost:9324");
+        SystemUtil.setenv("AWS_SQS_ENDPOINT", "http://localhost:1061");
         SystemUtil.setenv("AWS_ACCESS_KEY_ID", "X");
         SystemUtil.setenv("AWS_SECRET_ACCESS_KEY", "X");
     }
@@ -179,7 +179,7 @@ public class WiremockExtensionsIT {
         String responseBody = "{\"id\":\"$(!UUID)\"}";
 
         String callbackPath = "/callback/sqs-and-http";
-        String callbackUrl = "http://localhost:" + SERVER_PORT + callbackPath;
+        String callbackUrl = "http://host.docker.internal:" + SERVER_PORT + callbackPath;
 
         Map<String, Object> httpCallbackData = mapOf(entry("response_id", "$(response.id)"),
                 entry("data", "url-data"),
