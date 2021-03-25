@@ -3,6 +3,8 @@ package com.ninecookies.wiremock.extensions;
 import java.io.File;
 import java.util.concurrent.ScheduledExecutorService;
 
+import javax.jms.JMSException;
+
 import com.github.tomakehurst.wiremock.common.Json;
 import com.ninecookies.wiremock.extensions.SqsCallbackHandler.SqsCallback;
 
@@ -36,8 +38,12 @@ public class SqsCallbackHandler extends AbstractCallbackHandler<SqsCallback> {
             } else {
                 message = Json.write(callback.data);
             }
-            publisher.sendMessage(callback.queue, message);
-            getLog().info("message published to '{}'", callback.queue);
+            try {
+                publisher.sendMessage(callback.queue, message);
+                getLog().info("message published to '{}'", callback.queue);
+            } catch (JMSException e) {
+                throw new RetryCallbackException(e);
+            }
         } catch (Exception e) {
             throw new CallbackException(e);
         }

@@ -41,7 +41,7 @@ public class SnsCallbackHandler extends AbstractCallbackHandler<SnsCallback> {
             publisher.sendMessage(callback.topic, messageJson);
             getLog().info("message published to '{}'", callback.topic);
         } catch (Exception e) {
-            throw new CallbackException(e);
+            throw new RetryCallbackException(e);
         }
     }
 }
