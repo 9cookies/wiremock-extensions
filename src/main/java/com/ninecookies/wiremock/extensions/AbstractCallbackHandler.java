@@ -17,7 +17,7 @@ import com.ninecookies.wiremock.extensions.AbstractCallbackHandler.AbstractCallb
  * Represents the base class for callback handlers.
  *
  * @author M.Scheepers
- * @since 0.2.1
+ * @since 0.3.0
  */
 public abstract class AbstractCallbackHandler<T extends AbstractCallback> implements Runnable {
 

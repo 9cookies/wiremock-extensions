@@ -76,7 +76,7 @@ public class CallbackConfiguration {
             snsClientBuilder = AmazonSNSClientBuilder.standard()
                     .withCredentials(new DefaultAWSCredentialsProviderChain());
             String snsEndpoint = System.getenv("AWS_SNS_ENDPOINT");
-            if (Strings.isNullOrEmpty(sqsEndpoint)) {
+            if (Strings.isNullOrEmpty(snsEndpoint)) {
                 LOG.debug("amazonSNS with region '{}'", region);
                 snsClientBuilder.withRegion(region);
             } else {
