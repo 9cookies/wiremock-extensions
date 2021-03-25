@@ -10,6 +10,9 @@ import com.amazon.sqs.javamessaging.SQSConnection;
 import com.amazon.sqs.javamessaging.SQSConnectionFactory;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
+import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.ninecookies.wiremock.extensions.util.Strings;
 
@@ -42,8 +45,8 @@ public class CallbackConfiguration {
     private int retryBackoff;
     private int maxRetries;
     private String region;
-    private String endpoint;
-    private AmazonSQSClientBuilder clientBuilder;
+    private AmazonSQSClientBuilder sqsClientBuilder;
+    private AmazonSNSClientBuilder snsClientBuilder;
     private SQSConnectionFactory connectionFactory;
 
     private CallbackConfiguration() {
@@ -55,21 +58,33 @@ public class CallbackConfiguration {
         retryBackoff = parseEnvironmentSetting("RETRY_BACKOFF", DEFAULT_RETRY_BACKOFF);
         maxRetries = parseEnvironmentSetting("MAX_RETRIES", DEFAULT_MAX_RETRIES);
         region = System.getenv("AWS_REGION");
-        endpoint = System.getenv("AWS_SQS_ENDPOINT");
 
         if (!Strings.isNullOrEmpty(region)) {
-            clientBuilder = AmazonSQSClientBuilder.standard()
+            sqsClientBuilder = AmazonSQSClientBuilder.standard()
                     .withCredentials(new DefaultAWSCredentialsProviderChain());
-            if (Strings.isNullOrEmpty(endpoint)) {
+            String sqsEndpoint = System.getenv("AWS_SQS_ENDPOINT");
+            if (Strings.isNullOrEmpty(sqsEndpoint)) {
                 LOG.debug("amazonSQS with region '{}'", region);
-                clientBuilder.withRegion(region);
+                sqsClientBuilder.withRegion(region);
             } else {
-                LOG.warn("amazonSQS with region '{}' and endpoint '{}'", region, endpoint);
-                clientBuilder.setEndpointConfiguration(new EndpointConfiguration(endpoint, region));
+                LOG.warn("amazonSQS with region '{}' and endpoint '{}'", region, sqsEndpoint);
+                sqsClientBuilder.setEndpointConfiguration(new EndpointConfiguration(sqsEndpoint, region));
+            }
+
+            snsClientBuilder = AmazonSNSClientBuilder.standard()
+                    .withCredentials(new DefaultAWSCredentialsProviderChain());
+            String snsEndpoint = System.getenv("AWS_SNS_ENDPOINT");
+            if (Strings.isNullOrEmpty(sqsEndpoint)) {
+                LOG.debug("amazonSNS with region '{}'", region);
+                snsClientBuilder.withRegion(region);
+            } else {
+                LOG.warn("amazonSNS with region '{}' and endpoint '{}'", region, snsEndpoint);
+                snsClientBuilder.setEndpointConfiguration(new EndpointConfiguration(snsEndpoint, region));
             }
         } else {
-            LOG.info("AWS SQS messaging callbacks disabled");
-            clientBuilder = null;
+            LOG.info("AWS SNS/SQS messaging callbacks disabled");
+            sqsClientBuilder = null;
+            snsClientBuilder = null;
         }
     }
 
@@ -114,36 +129,62 @@ public class CallbackConfiguration {
     }
 
     /**
-     * Indicates whether SQS messaging is enabled.
+     * Indicates whether SNS/SQS messaging is enabled.
      *
-     * @return {@code true} if SQS callback messaging can be used; otherwise {@code false}.
+     * @return {@code true} if SNS/SQS callback messaging can be used; otherwise {@code false}.
      */
-    public boolean isSqsMessagingEnabled() {
-        return clientBuilder != null;
+    public boolean isMessagingEnabled() {
+        return !Strings.isNullOrEmpty(region);
+    }
+
+    /**
+     * Creates a new Amazon SNS client instance.
+     *
+     * @return a new {@link AmazonSNS} ready to use or {@code null} if {@link #isSnsMessagingEnabled()} is
+     *         {@code false}.
+     */
+    public AmazonSNS createSnsClient() {
+        if (!isMessagingEnabled()) {
+            return null;
+        }
+        return snsClientBuilder.build();
+    }
+
+    /**
+     * Creates a new Amazon SQS client instance.
+     *
+     * @return a new {@link AmazonSQS} ready to use or {@code null} if {@link #isSnsMessagingEnabled()} is
+     *         {@code false}.
+     */
+    public AmazonSQS createSqsClient() {
+        if (!isMessagingEnabled()) {
+            return null;
+        }
+        return sqsClientBuilder.build();
     }
 
     /**
      * Creates a new connection factory instance.
      *
-     * @return a new {@link SQSConnectionFactory} ready to use or {@code null} if {@link #isSqsMessagingEnabled()} is
+     * @return a new {@link SQSConnectionFactory} ready to use or {@code null} if {@link #isMessagingEnabled()} is
      *         {@code false}.
      */
     public SQSConnectionFactory createConnectionFactory() {
-        if (!isSqsMessagingEnabled()) {
+        if (!isMessagingEnabled()) {
             return null;
         }
-        return new SQSConnectionFactory(new ProviderConfiguration(), clientBuilder.build());
+        return new SQSConnectionFactory(new ProviderConfiguration(), sqsClientBuilder.build());
     }
 
     /**
      * Creates a new SQS connection ready to use.
      *
-     * @return a new {@link SQSConnection} ready to use or {@code null} if {@link #isSqsMessagingEnabled()} is
+     * @return a new {@link SQSConnection} ready to use or {@code null} if {@link #isMessagingEnabled()} is
      *         {@code false}.
      * @throws JMSException if a connection couldn't be established.
      */
     public SQSConnection createConnection() throws JMSException {
-        if (!isSqsMessagingEnabled()) {
+        if (!isMessagingEnabled()) {
             return null;
         }
         if (connectionFactory == null) {

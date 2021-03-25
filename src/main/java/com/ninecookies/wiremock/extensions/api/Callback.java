@@ -26,6 +26,10 @@ public class Callback {
      */
     public String queue;
     /**
+     * The destination TOPIC to send the {@link #data} to after {@link #delay} has elapsed.
+     */
+    public String topic;
+    /**
      * The authentication to use for the callback.
      */
     public Authentication authentication;
@@ -50,6 +54,22 @@ public class Callback {
         Callback result = new Callback();
         result.delay = delay;
         result.queue = queue;
+        result.data = message;
+        return result;
+    }
+
+    /**
+     * Create a new instance for an SNS message {@link Callback} definition.
+     *
+     * @param delay the period of time in milliseconds to wait before the callback data published.
+     * @param topic the destination topic name to send the message to.
+     * @param message an arbitrary JSON object representing the message to send.
+     * @return a new {@link Callback} instance ready to use.
+     */
+    public static Callback ofTopicMessage(int delay, String topic, Object message) {
+        Callback result = new Callback();
+        result.delay = delay;
+        result.topic = topic;
         result.data = message;
         return result;
     }

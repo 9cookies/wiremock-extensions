@@ -23,6 +23,7 @@ import com.github.tomakehurst.wiremock.extension.PostServeAction;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.jayway.jsonpath.DocumentContext;
 import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallback;
+import com.ninecookies.wiremock.extensions.SnsCallbackHandler.SnsCallback;
 import com.ninecookies.wiremock.extensions.SqsCallbackHandler.SqsCallback;
 import com.ninecookies.wiremock.extensions.api.Authentication;
 import com.ninecookies.wiremock.extensions.api.Callback;
@@ -47,8 +48,6 @@ public class CallbackSimulator extends PostServeAction {
     private static final Logger LOG = LoggerFactory.getLogger(CallbackSimulator.class);
     private static int instances = 0;
     private final long instance = ++instances;
-    private final int retryBackoff;
-    private final int maxRetries;
     private final boolean messagingEnabled;
 
     private final ScheduledExecutorService executor;
@@ -56,11 +55,9 @@ public class CallbackSimulator extends PostServeAction {
     public CallbackSimulator() {
         CallbackConfiguration config = CallbackConfiguration.getInstance();
         int corePoolSize = config.getCorePoolSize();
-        retryBackoff = config.getRetryBackoff();
-        maxRetries = config.getMaxRetries();
-        messagingEnabled = config.isSqsMessagingEnabled();
+        messagingEnabled = config.isMessagingEnabled();
         LOG.info("instance: {} - using SCHEDULED_THREAD_POOL_SIZE {} - RETRY_BACKOFF {} - MAX_RETRIES {}",
-                instance, corePoolSize, retryBackoff, maxRetries);
+                instance, corePoolSize, config.getRetryBackoff(), config.getMaxRetries());
         executor = Executors.newScheduledThreadPool(corePoolSize, new DaemonThreadFactory());
     }
 
@@ -88,10 +85,34 @@ public class CallbackSimulator extends PostServeAction {
                 scheduleHttpCallback(servedJson, Objects.convert(callback, HttpCallback.class));
             } else if (!Strings.isNullOrEmpty(callback.queue)) {
                 scheduleSqsCallback(servedJson, Objects.convert(callback, SqsCallback.class));
+            } else if (!Strings.isNullOrEmpty(callback.topic)) {
+                scheduleSnsCallback(servedJson, Objects.convert(callback, SnsCallback.class));
             } else {
-                throw new IllegalStateException("Unknown callback type - either 'queue' or 'url' must be specified.");
+                throw new IllegalStateException("Unknown callback type - "
+                        + "either 'queue', 'topic' or 'url' must be specified.");
             }
         }
+    }
+
+    private void scheduleSnsCallback(DocumentContext servedJson, SnsCallback callback) {
+        if (!messagingEnabled) {
+            LOG.warn("instance {} - sns callbacks disabled - ignore task to: '{}' with delay '{}' and data '{}'",
+                    instance, callback.topic, callback.delay, callback.data);
+            return;
+        }
+        String topic = callback.topic;
+        callback.topic = Placeholders.transformValue(servedJson, topic);
+        callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
+        if ("null".equals(callback.topic)) {
+            LOG.warn("instance {} - unresolvable SNS topic '{}' - ignore task to: '{}' with delay '{}' and data '{}'",
+                    instance, topic, callback.topic, callback.delay, callback.data);
+            return;
+        }
+        File callbackDefinition = persistCallback(callback);
+        LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
+                instance, callback.topic, callback.delay, callback.data);
+        Runnable callbackHandler = SnsCallbackHandler.of(callbackDefinition);
+        executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
     }
 
     private void scheduleSqsCallback(DocumentContext servedJson, SqsCallback callback) {
@@ -122,7 +143,7 @@ public class CallbackSimulator extends PostServeAction {
         File callbackDefinition = persistCallback(normalizedCallback);
         LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
                 instance, callback.url, callback.delay, callback.data);
-        Runnable callbackHandler = HttpCallbackHandler.of(executor, maxRetries, retryBackoff, callbackDefinition);
+        Runnable callbackHandler = HttpCallbackHandler.of(executor, callbackDefinition);
         executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
     }
 

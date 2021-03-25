@@ -91,10 +91,21 @@
             <artifactId>amazon-sqs-java-messaging-lib</artifactId>
             <version>1.0.8</version>
         </dependency>
+        <!-- used to send SNS messages -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sns</artifactId>
+            <version>1.11.106</version>
+        </dependency>
         <!-- logging -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-jcl</artifactId>
             <version>${log4j.version}</version>
         </dependency>
         <dependency>
@@ -270,7 +281,7 @@
                 <version>0.28.0</version>
                 <configuration>
                     <!-- uncomment the next line to debug the docker images
-                        <showLogs>softwaremill/elasticmq-native,deliveryhero/rps-wiremock</showLogs>
+                    <showLogs>localstack,deliveryhero/rps-wiremock</showLogs>
                     -->
                     <!-- explicit definition required -->
                     <skipBuild>${skipBuild}</skipBuild>
@@ -365,8 +376,8 @@
                                     <AWS_REGION>us-east-1</AWS_REGION>
                                     <AWS_ACCESS_KEY_ID>X</AWS_ACCESS_KEY_ID>
                                     <AWS_SECRET_ACCESS_KEY>X</AWS_SECRET_ACCESS_KEY>
+                                    <AWS_SNS_ENDPOINT>http://localhost:4575</AWS_SNS_ENDPOINT>
                                     <AWS_SQS_ENDPOINT>http://localhost:4576</AWS_SQS_ENDPOINT>
-                                    <AWS_SNS_ENDPOINT>http://localhost:4576</AWS_SNS_ENDPOINT>
                                     <CALLBACK_QUEUE>test-queue-name</CALLBACK_QUEUE>
                                     <CALLBACK_TOPIC>test-topic-name</CALLBACK_TOPIC>
                                     <PARTIAL_QUEUE_NAME>queue-name</PARTIAL_QUEUE_NAME>
