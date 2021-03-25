@@ -182,11 +182,11 @@ Specify the callback simulator with three callbacks. One is an HTTP request the 
 MyCallbackPayload callbackData = new MyCallbackPayload();
 String callbackUrl = "http://localhost:8080/my/listening/callback/url";
 int httpCallbackDelay = 10000;
-// arbitrary JSON object that represents the message to sent
+// arbitrary JSON object that represents the SQS message to sent
 MyCallbackSqsMessage callbackSqsMessage = new MyCallbackSqsMessage();
 String queueName = "callback-queue-name";
 int sqsCallbackDelay = 11000;
-
+// arbitrary JSON object that represents the SNS message to sent
 MyCallbackSnsMessage callbackSqsMessage = new MyCallbackSnsMessage();
 String topicName = "callback-topic-name";
 int snsCallbackDelay = 12000;
