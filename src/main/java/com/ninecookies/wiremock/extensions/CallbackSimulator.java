@@ -102,7 +102,7 @@ public class CallbackSimulator extends PostServeAction {
         }
         // normalize callback
         String queue = callback.queue;
-        callback.queue = Placeholders.transformValue(callback.queue);
+        callback.queue = Placeholders.transformValue(servedJson, callback.queue);
         callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
         // check for queue name String.valueOf((Object) null) as a result of transformValue()
         if ("null".equals(callback.queue)) {

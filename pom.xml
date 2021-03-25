@@ -359,6 +359,7 @@
                                     <AWS_SECRET_ACCESS_KEY>X</AWS_SECRET_ACCESS_KEY>
                                     <AWS_SQS_ENDPOINT>http://localhost:9324</AWS_SQS_ENDPOINT>
                                     <CALLBACK_QUEUE>test-queue-name</CALLBACK_QUEUE>
+                                    <PARTIAL_QUEUE_NAME>queue-name</PARTIAL_QUEUE_NAME>
                                 </env>
                                 <network>
                                     <mode>container</mode>

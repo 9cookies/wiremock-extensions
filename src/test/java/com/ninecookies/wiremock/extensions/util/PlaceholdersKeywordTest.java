@@ -13,6 +13,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.regex.Matcher;
 
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -23,6 +24,11 @@ public class PlaceholdersKeywordTest {
 
     private static final long OFFSET_MILLIS = 600;
 
+    @BeforeClass
+    public void beforeClass() {
+        SystemUtil.setenv("SOME_ENVIRONMENT_KEY", "some-env-value");
+    }
+
     @Test
     public void testTransformUrl() {
         DocumentContext placeholderSource = Placeholders.documentContextOf("{\"request\":"
@@ -32,6 +38,17 @@ public class PlaceholdersKeywordTest {
         String urlToTransform = "http://localhost/modify/$(request.id)?set=$(response.name)";
         String transformedUrl = Placeholders.transformUrl(placeholderSource, urlToTransform);
         assertEquals(transformedUrl, "http://localhost/modify/25?set=john+doe");
+    }
+
+    @Test
+    public void testTranformValue() {
+        DocumentContext placeholderSource = Placeholders.documentContextOf("{\"request\":"
+                + "{\"id\":25}" + ", \"response\":"
+                + "{\"name\":\"john doe\"}}");
+
+        String stringValue = "$(request.id)-$(!ENV[SOME_ENVIRONMENT_KEY])";
+        String transformedStringValue = Placeholders.transformUrl(placeholderSource, stringValue);
+        assertEquals(transformedStringValue, "25-some-env-value");
     }
 
     @Test
@@ -259,7 +276,6 @@ public class PlaceholdersKeywordTest {
 
     @DataProvider
     private Object[][] environmentPatternAndFixtures() {
-        SystemUtil.setenv("SOME_ENVIRONMENT_KEY", "some-env-value");
         return new Object[][] {
                 { "$(!ENV[SOME_ENVIRONMENT_KEY])", "some-env-value" },
                 { "$(!ENV[NON_EXISTING_ENVIRONMENT_KEY])", null }
