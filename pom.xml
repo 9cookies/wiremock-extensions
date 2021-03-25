@@ -5,7 +5,7 @@
 
     <groupId>com.ninecookies.wiremock.extensions</groupId>
     <artifactId>wiremock-extensions</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Wiremock Extensions</name>
@@ -38,6 +38,10 @@
         <restassured.version>2.9.0</restassured.version>
         <docker.resources>${project.basedir}/src/main/resources/docker</docker.resources>
         <docker.test.resources>${project.basedir}/src/test/resources</docker.test.resources>
+        
+        <sns.port>1060</sns.port>
+        <sqs.port>1061</sqs.port>
+        <wiremock.port>1062</wiremock.port>
     </properties>
 
     <scm>
@@ -87,10 +91,21 @@
             <artifactId>amazon-sqs-java-messaging-lib</artifactId>
             <version>1.0.8</version>
         </dependency>
+        <!-- used to send SNS messages -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sns</artifactId>
+            <version>1.11.106</version>
+        </dependency>
         <!-- logging -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-jcl</artifactId>
             <version>${log4j.version}</version>
         </dependency>
         <dependency>
@@ -266,36 +281,40 @@
                 <version>0.28.0</version>
                 <configuration>
                     <!-- uncomment the next line to debug the docker images
-                        <showLogs>softwaremill/elasticmq-native,deliveryhero/rps-wiremock</showLogs>
+                    <showLogs>localstack,deliveryhero/rps-wiremock</showLogs>
                     -->
                     <!-- explicit definition required -->
                     <skipBuild>${skipBuild}</skipBuild>
                     <images>
                         <image>
-                            <alias>sqs-messaging</alias>
-                            <name>softwaremill/elasticmq-native</name>
+                            <alias>localstack</alias>
+                            <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack</name>
                             <run>
                                 <ports>
-                                    <!-- elasticmq sqs -->
-                                    <port>9324:9324</port>
-                                    <!-- elasticmq UI -->
-                                    <port>9091:9325</port>
-                                    <!-- wiremock -->
-                                    <port>9090:9090</port>
+                                    <port>${sns.port}:4575</port>
+                                    <port>${sqs.port}:4576</port>
+                                    <port>8081:8080</port>
+                                    <port>${wiremock.port}:9090</port>
                                 </ports>
                                 <wait>
                                     <tcp>
                                         <host>127.0.0.1</host>
                                         <ports>
-                                            <port>9324</port>
-                                            <port>9325</port>
+                                            <port>4575</port>
+                                            <port>4576</port>
+                                            <port>8080</port>
                                             <port>9090</port>
                                         </ports>
                                     </tcp>
+                                    <log>initialization finished successfully</log>
+                                    <time>60000</time>
                                 </wait>
+                                <env>
+                                    <SERVICES>sns,sqs</SERVICES>
+                                </env>
                                 <volumes>
                                     <bind>
-                                        <volume>${docker.test.resources}/elasticmq/queue.conf:/opt/elasticmq.conf</volume>
+                                        <volume>${docker.test.resources}/localstack/init.sh:/docker-entrypoint-initaws.d/init.sh</volume>
                                     </bind>
                                 </volumes>
                             </run>
@@ -357,15 +376,18 @@
                                     <AWS_REGION>us-east-1</AWS_REGION>
                                     <AWS_ACCESS_KEY_ID>X</AWS_ACCESS_KEY_ID>
                                     <AWS_SECRET_ACCESS_KEY>X</AWS_SECRET_ACCESS_KEY>
-                                    <AWS_SQS_ENDPOINT>http://localhost:9324</AWS_SQS_ENDPOINT>
+                                    <AWS_SNS_ENDPOINT>http://localhost:4575</AWS_SNS_ENDPOINT>
+                                    <AWS_SQS_ENDPOINT>http://localhost:4576</AWS_SQS_ENDPOINT>
                                     <CALLBACK_QUEUE>test-queue-name</CALLBACK_QUEUE>
+                                    <CALLBACK_TOPIC>test-topic-name</CALLBACK_TOPIC>
                                     <PARTIAL_QUEUE_NAME>queue-name</PARTIAL_QUEUE_NAME>
+                                    <PARTIAL_TOPIC_NAME>topic-name</PARTIAL_TOPIC_NAME>
                                 </env>
                                 <network>
                                     <mode>container</mode>
-                                    <name>softwaremill/elasticmq-native</name>
+                                    <name>940776968316.dkr.ecr.eu-west-1.amazonaws.com/deliveryhero/rps-localstack</name>
                                 </network>
-                                <cmd>--port 9090</cmd>
+                                <cmd>--disable-banner --port 9090</cmd>
                                 <volumes>
                                     <bind>
                                         <volume>${docker.test.resources}/__files:/home/wiremock/__files</volume>

@@ -1,6 +1,6 @@
 {
     "request": {
-        "url": "/request/sqs/callback",
+        "url": "/request/sns/callback",
         "method": "POST"
     },
     "response": {
@@ -18,7 +18,7 @@
             "callbacks": [
                 {
                     "delay": 100,
-                    "queue": "test-queue-name",
+                    "topic": "test-topic-name",
                     "data": {
                         "messageId": "$(request.messageId)",
                         "response_id": "$(response.id)",

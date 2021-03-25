@@ -17,6 +17,8 @@
     </Appenders>
     <Loggers>
         <Logger name="com.ninecookies.wiremock.extensions" level="${logLevel}" />
+        <Logger name="com.amazonaws" level="WARN" />
+        <Logger name="com.amazon.sqs" level="WARN" />
         <Root level="info">
             <AppenderRef ref="console" />
         </Root>

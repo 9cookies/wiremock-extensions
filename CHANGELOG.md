@@ -4,12 +4,12 @@
 
 Important Notes: - none
 
-Version: 0.2.1
+Version: 0.3.0
 
 Author: M.Scheepers
 
 ### Features
-- none
+- The callback-simulator post serve extension now supports AWS SNS message publishing.
 
 ### Improvements
 - Support for multiple placeholders and keywords in SQS message callback queue names.

@@ -33,8 +33,10 @@ public class CallbackConfigurationTest {
         assertEquals(config.getCorePoolSize(), 100);
         assertEquals(config.getMaxRetries(), 3);
         assertEquals(config.getRetryBackoff(), 2_500);
-        assertFalse(config.isSqsMessagingEnabled());
+        assertFalse(config.isMessagingEnabled());
         assertNull(config.createConnectionFactory());
         assertNull(config.createConnection());
+        assertNull(config.createSnsClient());
+        assertNull(config.createSqsClient());
     }
 }

@@ -29,22 +29,22 @@ import org.slf4j.LoggerFactory;
  * </code>
  * </pre>
  */
-public class MessagePublisher implements AutoCloseable {
+public class SqsMessagePublisher implements AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MessagePublisher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SqsMessagePublisher.class);
 
     private final Connection connection;
     private Session session;
 
     /**
-     * Initialize a new instance of the {@link MessagePublisher} with the specified arguments.
+     * Initialize a new instance of the {@link SqsMessagePublisher} with the specified arguments.
      *
      * @throws IllegalStateException - if AWS SQS messaging is disabled due to lacking configuration.
      * @throws JMSException - if a connection couldn't be established.
      */
-    public MessagePublisher() throws JMSException {
+    public SqsMessagePublisher() throws JMSException {
         CallbackConfiguration configuration = CallbackConfiguration.getInstance();
-        if (!configuration.isSqsMessagingEnabled()) {
+        if (!configuration.isMessagingEnabled()) {
             throw new IllegalStateException("AWS SQS messaging is disabled due to lacking configuration.");
         }
         this.connection = configuration.createConnection();
