@@ -25,8 +25,10 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * <li>{@code RETRY_BACKOFF} default 5_000
  * <li>{@code MAX_RETRIES} default 0 (means disabled)
  * <li>{@code AWS_REGION} the AWS region for SQS messaging (default empty means SQS messaging disabled).
- * <li>{@code AWS_SQS_ENDPOINT} the SQS endpoint to use for testing with localstack or elasticmq (default empty means
- * AWS SQS messaging is used).
+ * <li>{@code AWS_SQS_ENDPOINT} the SQS endpoint to use for testing with localstack (default empty means
+ * AWS messaging is used).
+ * <li>{@code AWS_SNS_ENDPOINT} the SNS endpoint to use for testing with localstack (default empty means
+ * AWS messaging is used).
  * </ul>
  *
  * @author M.Scheepers

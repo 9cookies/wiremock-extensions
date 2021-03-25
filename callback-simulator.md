@@ -48,6 +48,11 @@ Internally the callback simulator utilizes Java's `ScheduledExecutorService` wit
 
 Callback requests errors will be logged but note that retry handling is disabled by default. If a callback fails it fails...
 
+### Retry handling
+
+Enabling retry handling for callbacks which may be useful during load testing depending on the service under test is as simple as specifying `MAX_RETRIES` with some positive value depending on the number of desired retries that should be performed. The retry handling uses a back off period of 5 seconds by default that can be configured by specifying `RETRY_BACKOFF` (default 5_000 milliseconds). This value is multiplied with the invocation count to reschedule the callback.
+So with `MAX_RETRIES` set to `3` retries will happen after 5, 10 and 15 seconds thus the callback will be retried for 30 seconds in total.
+
 ### Common Callback Model
 
 The properties shared by all callbacks are the `delay` and the `data` where the delay defines the wait time in seconds the callback will scheduled for when the URL defined in the mapping stub was requested.
@@ -61,13 +66,15 @@ The properties shared by all callbacks are the `delay` and the `data` where the 
 }
 ```
 
-### SQS Callbacks
+### SNS/SQS Callbacks
 
-The configuration for the AWS SQS client requires the `AWS_REGION` environment variable to be provided. For testing purposes it is possible to specify the `MESSAGING_SQS_ENDPOINT` but depending of the test stack (elasticMQ / localstack) access id and secret key might be required as well.
+The configuration for the AWS SNS and SQS clients requires the `AWS_REGION` environment variable to be provided. For testing purposes it is possible to specify the `AWS_SQS_ENDPOINT` and `AWS_SNS_ENDPOINT` but depending of the test stack (elasticMQ / localstack) access id and secret key might be required as well.
+
+>:warning: elasticMQ doesn't support SNS messaging
 
 When running as a kubernetes pod in a larger test environment with real AWS queues the endpoint should be empty so that the default AWS endpoint is used. The credentials should be set up through the container.
 
-The only additional property for SQS callbacks is the `queue` property to provide the queue name to publish messages to. The queue property may contain placeholders like request and response references or an [environment variable](keywords.md#environment-variable-key-word).
+The only additional property for SQS callbacks is the `queue` and for SNS callbacks is the `topic` property to provide the queue or topic name to publish messages to. The queue or topic property may contain placeholders like request and response references or an [environment variable](keywords.md#environment-variable-key-word).
 
 #### SQS Callback example JSON
 
@@ -91,16 +98,34 @@ The only additional property for SQS callbacks is the `queue` property to provid
 }
 ```
 
-> :bulb: see [ElasticMQ](https://github.com/softwaremill/elasticmq/blob/master/README.md#starting-an-embedded-elasticmq-server-with-an-sqs-interface) and [localstack](https://github.com/localstack/localstack#localstack---a-fully-functional-local-aws-cloud-stack) for details on testing AWS SQS messaging.
+#### SNS Callback example JSON
+
+```json
+{
+    "topic": "my-sns-topic-name",
+    "delay": 1000,
+    "data": {
+        "json_representation": "of MyCallbackPayload"
+    }
+}
+```
+
+```json
+{
+    "queue": "$(!ENV[SNS_TOPIC_NAME])",
+    "delay": 1000,
+    "data": {
+        "json_representation": "of MyCallbackPayload"
+    }
+}
+```
+
+
+> :bulb: see [ElasticMQ](https://github.com/softwaremill/elasticmq/blob/master/README.md#starting-an-embedded-elasticmq-server-with-an-sqs-interface) and [localstack](https://github.com/localstack/localstack#localstack---a-fully-functional-local-aws-cloud-stack) for details on testing AWS SNS / SQS messaging.
 
 ### HTTP Callbacks
 
 HTTP provides some more properties compared to SQS. Beside the obvious required `url` also the optional support for `authentication` and request identification using a `traceId` is implemented. Similar to the queue property for SQS callbacks the url, username and password properties may contain placeholders and keywords.
-
-#### Retry handling
-
-Enabling retry handling for HTTP callbacks which may be useful during load testing depending on the service under test is as simple as specifying `MAX_RETRIES` with some positive value depending on the number of desired retries that should be performed. The retry handling uses a back off period of 5 seconds by default that can be configured by specifying `RETRY_BACKOFF` (default 5_000 milliseconds). This value is multiplied with the invocation count to reschedule the callback.
-So with `MAX_RETRIES` set to `3` retries will happen after 5, 10 and 15 seconds thus the callback will be retried for 30 seconds in total.  
 
 #### Request identification
 
@@ -150,7 +175,7 @@ The examples assume that you are familiar with WireMocks [stubbing](http://wirem
 
 ### 1. Example - mixed callbacks
 
-Specify the callback simulator with two callbacks. One is an HTTP request the other an SQS message callback.
+Specify the callback simulator with three callbacks. One is an HTTP request the second an SQS message and the last an SNS message callback.
 
 ```java
 // arbitrary JSON object that represents the payload to POST
@@ -158,15 +183,20 @@ MyCallbackPayload callbackData = new MyCallbackPayload();
 String callbackUrl = "http://localhost:8080/my/listening/callback/url";
 int httpCallbackDelay = 10000;
 // arbitrary JSON object that represents the message to sent
-MyCallbackMessage callbackMessage = new MyCallbackMessage();
+MyCallbackSqsMessage callbackSqsMessage = new MyCallbackSqsMessage();
 String queueName = "callback-queue-name";
 int sqsCallbackDelay = 11000;
+
+MyCallbackSnsMessage callbackSqsMessage = new MyCallbackSnsMessage();
+String topicName = "callback-topic-name";
+int snsCallbackDelay = 12000;
 
 // Note the usage of the com.ninecookies.wiremock.extensions.api.Callbacks and Callback classes
 wireMockServer.stubFor(post(urlEqualTo("/url/to/post/to"))
         .withPostServeAction("callback-simulator", Callbacks.of(
             Callback.of(httpCallbackDelay, callbackUrl, callbackData),
-            Callback.ofQueueMessage(sqsCallbackDelay, queueName, callbackMessage)
+            Callback.ofQueueMessage(sqsCallbackDelay, queueName, callbackSqsMessage),
+            Callback.ofTopicMessage(snsCallbackDelay, topicName, callbackSnsMessage)
         ))
         .willReturn(aResponse()
                 .withHeader("content-type", "application/json")
@@ -207,7 +237,14 @@ Similar in JSON
                     "delay": 11000,
                     "queue": "callback-queue-name",
                     "data": {
-                        "json representation": "of MyCallbackMessage"
+                        "json representation": "of MyCallbackSqsMessage"
+                    }
+                }
+                {
+                    "delay": 12000,
+                    "queue": "callback-topic-name",
+                    "data": {
+                        "json representation": "of MyCallbackSnsMessage"
                     }
                 }
             ]
