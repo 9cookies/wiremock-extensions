@@ -10,4 +10,3 @@ echo "create subscription"
 echo "    $(createSubscription $queue $topic rawMessageDelivery)"
 echo "initialization finished successfully"
 exit 0
- 
