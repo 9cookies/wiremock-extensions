@@ -96,24 +96,15 @@ public abstract class AbstractCallbackHandler<T extends AbstractCallback> implem
                 if (invocation > 1) {
                     retryInfo = " after " + invocation + " attempts";
                 }
-                log.error("unable to publish '{}' message{}", type.getSimpleName(), retryInfo, e);
+                log.warn("unable to publish '{}' message{}", type.getSimpleName(), retryInfo, e);
             } else {
-                getLog().warn("publishing of {} will be retried", type.getSimpleName(), e);
+                log.info("publishing of {} will be retried", type.getSimpleName(), e);
             }
         } finally {
             if (cleanup) {
                 deleteCallback();
             }
         }
-    }
-
-    /**
-     * Gets the logger to be use by extending classes.
-     *
-     * @return the {@link Logger} instance.
-     */
-    protected Logger getLog() {
-        return log;
     }
 
     /**
@@ -126,13 +117,12 @@ public abstract class AbstractCallbackHandler<T extends AbstractCallback> implem
     protected abstract void handle(T callback) throws CallbackException;
 
     /**
-     * Initialize a new instance of the {@link AbstractCallbackHandler} with the specified arguments.
+     * Gets the logger to be use by extending classes.
      *
-     * @param callbackFile the {@link File} reference to the callback definition.
-     * @param type the {@link Class} type of the callback.
+     * @return the {@link Logger} instance.
      */
-    protected AbstractCallbackHandler(File callbackFile, Class<T> type) {
-        this(null, callbackFile, type);
+    protected Logger getLog() {
+        return log;
     }
 
     /**

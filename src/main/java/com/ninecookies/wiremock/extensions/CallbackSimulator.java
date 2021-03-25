@@ -111,7 +111,7 @@ public class CallbackSimulator extends PostServeAction {
         File callbackDefinition = persistCallback(callback);
         LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
                 instance, callback.topic, callback.delay, callback.data);
-        Runnable callbackHandler = SnsCallbackHandler.of(callbackDefinition);
+        Runnable callbackHandler = SnsCallbackHandler.of(executor, callbackDefinition);
         executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
     }
 
@@ -134,7 +134,7 @@ public class CallbackSimulator extends PostServeAction {
         File callbackDefinition = persistCallback(callback);
         LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
                 instance, callback.queue, callback.delay, callback.data);
-        Runnable callbackHandler = SqsCallbackHandler.of(callbackDefinition);
+        Runnable callbackHandler = SqsCallbackHandler.of(executor, callbackDefinition);
         executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
     }
 
