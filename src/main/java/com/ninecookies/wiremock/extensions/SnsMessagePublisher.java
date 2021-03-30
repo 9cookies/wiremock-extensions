@@ -36,18 +36,26 @@ public class SnsMessagePublisher {
     }
 
     private String resolveTopicArn(String topicName) {
+        if (topicName.startsWith("arn:aws:sns")) {
+            // looks like full qualified topic arn, simply return
+            return topicName;
+        }
         String result = resolvedTopics.computeIfAbsent(topicName, tn -> {
-            ListTopicsResult list = null;
-            do {
-                list = (list == null) ? client.listTopics() : client.listTopics(list.getNextToken());
-                for (Topic topic : list.getTopics()) {
-                    LOG.debug("{}.endsWith({}) => {}", topic.getTopicArn(), topicName,
-                            topic.getTopicArn().endsWith(topicName));
-                    if (topic.getTopicArn().endsWith(topicName)) {
-                        return topic.getTopicArn();
+            try {
+                ListTopicsResult list = null;
+                do {
+                    list = (list == null) ? client.listTopics() : client.listTopics(list.getNextToken());
+                    for (Topic topic : list.getTopics()) {
+                        LOG.debug("{}.endsWith({}) => {}", topic.getTopicArn(), topicName,
+                                topic.getTopicArn().endsWith(topicName));
+                        if (topic.getTopicArn().endsWith(topicName)) {
+                            return topic.getTopicArn();
+                        }
                     }
-                }
-            } while (!Strings.isNullOrEmpty(list.getNextToken()));
+                } while (!Strings.isNullOrEmpty(list.getNextToken()));
+            } catch (Exception e) {
+                LOG.error("unable to resolve topic arn", e);
+            }
             return UNRESOLVABLE_TOPIC;
         });
         if (UNRESOLVABLE_TOPIC.equals(result)) {

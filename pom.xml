@@ -379,9 +379,8 @@
                                     <AWS_SNS_ENDPOINT>http://localhost:4575</AWS_SNS_ENDPOINT>
                                     <AWS_SQS_ENDPOINT>http://localhost:4576</AWS_SQS_ENDPOINT>
                                     <CALLBACK_QUEUE>test-queue-name</CALLBACK_QUEUE>
-                                    <CALLBACK_TOPIC>test-topic-name</CALLBACK_TOPIC>
+                                    <CALLBACK_TOPIC_ARN>arn:aws:sns:us-east-1:000000000000:test-topic-name</CALLBACK_TOPIC_ARN>
                                     <PARTIAL_QUEUE_NAME>queue-name</PARTIAL_QUEUE_NAME>
-                                    <PARTIAL_TOPIC_NAME>topic-name</PARTIAL_TOPIC_NAME>
                                 </env>
                                 <network>
                                     <mode>container</mode>
