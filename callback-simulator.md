@@ -74,6 +74,8 @@ The configuration for the AWS SNS and SQS clients requires the `AWS_REGION` envi
 
 When running as a kubernetes pod in a larger test environment with real AWS queues the endpoint should be empty so that the default AWS endpoint is used. The credentials should be set up through the container.
 
+>:warning: if the configured AWS account is not authorized to perform: SNS:ListTopics a full qualified SNS topic arn must be configured
+
 The only additional property for SQS callbacks is the `queue` and for SNS callbacks is the `topic` property to provide the queue or topic name to publish messages to. The queue or topic property may contain placeholders like request and response references or an [environment variable](keywords.md#environment-variable-key-word).
 
 #### SQS Callback example JSON

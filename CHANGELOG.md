@@ -1,6 +1,6 @@
 # Change Log
 
-## 2021-mm-dd - <changes>
+## 2021-03-31 - Features - Improvements
 
 Important Notes: - none
 
@@ -13,9 +13,6 @@ Author: M.Scheepers
 
 ### Improvements
 - Support for multiple placeholders and keywords in SQS message callback queue names.
-
-### Fixes
-- none
 
 
 ## 2021-03-19 - Features - Improvements - Fixes
