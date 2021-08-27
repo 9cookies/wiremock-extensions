@@ -14,7 +14,7 @@ import com.ninecookies.wiremock.extensions.SqsCallbackHandler.SqsCallback;
  */
 public class SqsCallbackHandler extends AbstractCallbackHandler<SqsCallback> {
 
-    public static class SqsCallback extends AbstractCallbackHandler.AbstractCallback {
+    public static class SqsCallback extends AbstractCallbackHandler.AbstractCallbackDefinition {
         /**
          * The destination queue to send the data to after delay has elapsed.
          */

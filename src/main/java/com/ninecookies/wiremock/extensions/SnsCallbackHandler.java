@@ -12,7 +12,7 @@ import com.ninecookies.wiremock.extensions.SnsCallbackHandler.SnsCallback;
  */
 public class SnsCallbackHandler extends AbstractCallbackHandler<SnsCallback> {
 
-    public static class SnsCallback extends AbstractCallbackHandler.AbstractCallback {
+    public static class SnsCallback extends AbstractCallbackHandler.AbstractCallbackDefinition {
         /**
          * The destination topic to send the data to after delay has elapsed.
          */

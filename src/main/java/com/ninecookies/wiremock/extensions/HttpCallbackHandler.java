@@ -36,7 +36,7 @@ import com.ninecookies.wiremock.extensions.api.Authentication;
  */
 public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallback> {
 
-    public static class HttpCallback extends AbstractCallbackHandler.AbstractCallback {
+    public static class HttpCallback extends AbstractCallbackHandler.AbstractCallbackDefinition {
         /**
          * The destination URL to POST the data to after delay has elapsed.
          */
