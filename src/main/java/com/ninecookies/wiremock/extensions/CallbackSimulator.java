@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -78,90 +79,79 @@ public class CallbackSimulator extends PostServeAction {
                 + serveEvent.getResponse().getBodyAsString() + ", \"urlParts\":"
                 + Json.write(urlParts) + "}");
 
+        Map<String, Object> placeholders = Placeholders.parsePlaceholders(Json.write(parameters), servedJson);
+
         Callbacks callbacks = parameters.as(Callbacks.class);
 
         for (Callback callback : callbacks.callbacks) {
+            Runnable handler = null;
             if (!Strings.isNullOrEmpty(callback.url)) {
-                scheduleHttpCallback(servedJson, Objects.convert(callback, HttpCallback.class));
+                handler = createHttpHandler(placeholders, Objects.convert(callback, HttpCallback.class));
             } else if (!Strings.isNullOrEmpty(callback.queue)) {
-                scheduleSqsCallback(servedJson, Objects.convert(callback, SqsCallback.class));
+                handler = createSqsHandler(placeholders, Objects.convert(callback, SqsCallback.class));
             } else if (!Strings.isNullOrEmpty(callback.topic)) {
-                scheduleSnsCallback(servedJson, Objects.convert(callback, SnsCallback.class));
+                handler = createSnsHandler(placeholders, Objects.convert(callback, SnsCallback.class));
             } else {
                 throw new IllegalStateException("Unknown callback type - "
                         + "either 'queue', 'topic' or 'url' must be specified.");
             }
+            if (handler != null) {
+                executor.schedule(handler, callback.delay, TimeUnit.MILLISECONDS);
+            }
         }
     }
 
-    private void scheduleSnsCallback(DocumentContext servedJson, SnsCallback callback) {
+    private Runnable createSnsHandler(Map<String, Object> placeholders, SnsCallback callback) {
         if (!messagingEnabled) {
             LOG.warn("instance {} - sns callbacks disabled - ignore task to: '{}' with delay '{}' and data '{}'",
                     instance, callback.topic, callback.delay, callback.data);
-            return;
+            return null;
         }
         String topic = callback.topic;
-        callback.topic = Placeholders.transformValue(servedJson, topic);
-        callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
+        callback.topic = Placeholders.transformValue(placeholders, topic, false);
         if ("null".equals(callback.topic)) {
             LOG.warn("instance {} - unresolvable SNS topic '{}' - ignore task to: '{}' with delay '{}' and data '{}'",
                     instance, topic, callback.topic, callback.delay, callback.data);
-            return;
+            return null;
         }
+        callback.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
         File callbackDefinition = persistCallback(callback);
         LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
                 instance, callback.topic, callback.delay, callback.data);
-        Runnable callbackHandler = SnsCallbackHandler.of(executor, callbackDefinition);
-        executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
+        return SnsCallbackHandler.of(executor, callbackDefinition);
     }
 
-    private void scheduleSqsCallback(DocumentContext servedJson, SqsCallback callback) {
+    private Runnable createSqsHandler(Map<String, Object> placeholders, SqsCallback callback) {
         if (!messagingEnabled) {
             LOG.warn("instance {} - sqs callbacks disabled - ignore task to: '{}' with delay '{}' and data '{}'",
                     instance, callback.queue, callback.delay, callback.data);
-            return;
+            return null;
         }
         // normalize callback
         String queue = callback.queue;
-        callback.queue = Placeholders.transformValue(servedJson, callback.queue);
-        callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
+        callback.queue = Placeholders.transformValue(placeholders, callback.queue, false);
         // check for queue name String.valueOf((Object) null) as a result of transformValue()
         if ("null".equals(callback.queue)) {
             LOG.warn("instance {} - unresolvable SQS queue '{}' - ignore task to: '{}' with delay '{}' and data '{}'",
                     instance, queue, callback.queue, callback.delay, callback.data);
-            return;
+            return null;
         }
+        callback.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
         File callbackDefinition = persistCallback(callback);
         LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
                 instance, callback.queue, callback.delay, callback.data);
-        Runnable callbackHandler = SqsCallbackHandler.of(executor, callbackDefinition);
-        executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
+        return SqsCallbackHandler.of(executor, callbackDefinition);
     }
 
-    private void scheduleHttpCallback(DocumentContext servedJson, HttpCallback callback) {
-        HttpCallback normalizedCallback = normalizeHttpCallback(servedJson, callback);
-        File callbackDefinition = persistCallback(normalizedCallback);
-        LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
-                instance, callback.url, callback.delay, callback.data);
-        Runnable callbackHandler = HttpCallbackHandler.of(executor, callbackDefinition);
-        executor.schedule(callbackHandler, callback.delay, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Normalizes the specified {@code callback} according to the specified {@code servedJson} and replaces placeholder
-     * patterns in {@link Callback#data} as well as in {@link Callback#url}.<br>
-     * In addition it ensures that the {@link Callback#traceId} is present.
-     *
-     * @param servedJson a {@link DocumentContext} representing the request and response bodies as well as the request
-     *            path.
-     * @param callback the {@link Callback} to normalize.
-     * @return the normalized {@link Callback} with replaced patterns and keywords according to the specified
-     *         {@code servedJson}.
-     */
-    private HttpCallback normalizeHttpCallback(DocumentContext servedJson, HttpCallback callback) {
-        LOG.debug("url: {} data: {}", callback.url, Objects.describe(callback.data));
-        callback.data = Placeholders.transformJson(servedJson, Json.write(callback.data));
-        callback.url = Placeholders.transformUrl(servedJson, callback.url);
+    private Runnable createHttpHandler(Map<String, Object> placeholders, HttpCallback callback) {
+        String url = callback.url;
+        callback.url = Placeholders.transformValue(placeholders, callback.url, true);
+        if ("null".equals(callback.url)) {
+            LOG.warn(
+                    "instance {} - unresolvable callback URL '{}' - ignore task to: '{}' with delay '{}' and data '{}'",
+                    instance, url, callback.url, callback.delay, callback.data);
+            return null;
+        }
         if (callback.authentication != null) {
             callback.authentication = Authentication.of(
                     Placeholders.transformValue(callback.authentication.getUsername()),
@@ -170,8 +160,11 @@ public class CallbackSimulator extends PostServeAction {
         if (callback.traceId == null) {
             callback.traceId = UUID.randomUUID().toString().replace("-", "");
         }
-        LOG.debug("final url: {} data: {}", callback.url, callback.data);
-        return callback;
+        callback.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
+        File callbackDefinition = persistCallback(callback);
+        LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
+                instance, callback.url, callback.delay, callback.data);
+        return HttpCallbackHandler.of(executor, callbackDefinition);
     }
 
     /**
