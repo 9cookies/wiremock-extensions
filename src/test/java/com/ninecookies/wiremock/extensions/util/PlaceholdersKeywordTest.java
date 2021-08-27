@@ -34,9 +34,8 @@ public class PlaceholdersKeywordTest {
         DocumentContext placeholderSource = Placeholders.documentContextOf("{\"request\":"
                 + "{\"id\":25}" + ", \"response\":"
                 + "{\"name\":\"john doe\"}}");
-
         String urlToTransform = "http://localhost/modify/$(request.id)?set=$(response.name)";
-        String transformedUrl = Placeholders.transformUrl(placeholderSource, urlToTransform);
+        String transformedUrl = Placeholders.transformValue(placeholderSource, urlToTransform, true);
         assertEquals(transformedUrl, "http://localhost/modify/25?set=john+doe");
     }
 
@@ -47,7 +46,7 @@ public class PlaceholdersKeywordTest {
                 + "{\"name\":\"john doe\"}}");
 
         String stringValue = "$(request.id)-$(!ENV[SOME_ENVIRONMENT_KEY])";
-        String transformedStringValue = Placeholders.transformUrl(placeholderSource, stringValue);
+        String transformedStringValue = Placeholders.transformValue(placeholderSource, stringValue, true);
         assertEquals(transformedStringValue, "25-some-env-value");
     }
 
@@ -58,7 +57,7 @@ public class PlaceholdersKeywordTest {
                 + "{\"name\":\"john doe\"}}");
 
         String urlToTransform = "http://localhost/modify/$(request.id)?set=$(response.unknown)";
-        String transformedUrl = Placeholders.transformUrl(placeholderSource, urlToTransform);
+        String transformedUrl = Placeholders.transformValue(placeholderSource, urlToTransform, true);
         assertEquals(transformedUrl, "http://localhost/modify/25?set=null");
     }
 
@@ -69,7 +68,7 @@ public class PlaceholdersKeywordTest {
                 + "{\"name\":\"john doe\"}}");
 
         String urlToTransform = "http://localhost/modify/without?set=placeholders";
-        String transformedUrl = Placeholders.transformUrl(placeholderSource, urlToTransform);
+        String transformedUrl = Placeholders.transformValue(placeholderSource, urlToTransform, true);
         assertEquals(transformedUrl, "http://localhost/modify/without?set=placeholders");
     }
 

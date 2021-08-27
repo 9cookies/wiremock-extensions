@@ -34,7 +34,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 
 /**
- * Provides convenient methods to parse, populate and replace placeholders in JSON strings.
+ * Provides convenient methods to parse, populate and replace placeholders in template strings.
  *
  * @author M.Scheepers
  * @since 0.0.6
@@ -42,41 +42,39 @@ import com.jayway.jsonpath.Option;
 public class Placeholders {
     private static final Logger LOG = LoggerFactory.getLogger(Placeholders.class);
     private static final UnaryOperator<String> QUOTES = s -> String.format("\"%s\"", s);
-    static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\(.*?\\)");
-
-    // visible for testing
-    static final Pattern KEYWORD_PATTERN = Pattern.compile("\\$\\(!(" +
-            Stream.of(Keyword.keywords()).map(Keyword::keyword).collect(Collectors.joining("|"))
-            + ")(.*)\\)");
-
     private static final ConfigurationBuilder JSON_CONTEXT_CONFIGURATION_BUILDER = Configuration.builder()
             .options(Option.DEFAULT_PATH_LEAF_TO_NULL)
             .options(Option.SUPPRESS_EXCEPTIONS);
 
     /**
-     * Replaces all placeholders in the specified <i>jsonToTransform</i> with the related values looked up in the
-     * specified <i>placeholderSource</i>.
-     *
-     * @param placeholderSource the placeholder source JSON string to look up values.
-     * @param jsonToTransform the template JSON string containing the placeholders.
-     * @return the JSON result of the template with placeholders replaced by their related values.
+     * Matches placeholders and keywords '\$\(.*?\)'
      */
-    public static String transformJson(String placeholderSource, String jsonToTransform) {
-        return transformJson(documentContextOf(placeholderSource), jsonToTransform);
-    }
+    static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\(.*?\\)");
+
+    // visible for testing
+    /**
+     * Matches keywords '\$\(!(Random|OffsetDateTime|Instant|ENV|UUID|Timestamp)(.*)\)'
+     * group 1 -> keyword
+     * group 2 -> parameters
+     */
+    static final Pattern KEYWORD_PATTERN = Pattern.compile("\\$\\(!(" +
+            Stream.of(Keyword.keywords()).map(Keyword::keyword).collect(Collectors.joining("|"))
+            + ")(.*)\\)");
 
     /**
-     * Replaces all placeholders in the specified <i>jsonToTransform</i> with the related values looked up in the
-     * specified <i>placeholderSource</i>.
+     * Creates a {@link DocumentContext} for the specified <i>json</i> string.
      *
-     * @param placeholderSource the placeholder source {@link DocumentContext}to look up values.
-     * @param jsonToTransform the template JSON string containing the placeholders.
-     * @return the JSON result of the template with placeholders replaced by their related values.
+     * @param json the JSON {@link String} to create the {@link DocumentContext} for.
+     * @return the {@link DocumentContext} for the specified {@code json} string or {@code null} if {@code json} is
+     *         {@code null} or empty ({@code ""}).
      */
-    public static String transformJson(DocumentContext placeholderSource, String jsonToTransform) {
-        Map<String, Object> responsePlaceholders = Placeholders.parseJsonBody(jsonToTransform);
-        Placeholders.parsePlaceholderValues(responsePlaceholders, placeholderSource);
-        return Placeholders.replaceValuesInJson(responsePlaceholders, jsonToTransform);
+    public static DocumentContext documentContextOf(String json) {
+        DocumentContext result = null;
+        if (json != null && json.trim().length() > 0) { // ? PARSE_CONTEXT.parse(json) : null;
+            result = JsonPath.parse(json, JSON_CONTEXT_CONFIGURATION_BUILDER.build());
+        }
+        LOG.debug("documentContextOf('{}') -> '{}'", json, describe(result));
+        return result;
     }
 
     /**
@@ -92,7 +90,54 @@ public class Placeholders {
     }
 
     /**
-     * Checks whether the provided {@code value} is a keyword pattern and if so returns the keyword generated value.
+     * Replaces all placeholders in the specified <i>templateJson</i> with the related values looked up in the
+     * specified <i>sourceJson</i>.
+     *
+     * @param sourceJson the source JSON string to look up placeholder values.
+     * @param templateJson the template JSON string containing the placeholders.
+     * @return the JSON result of the template with placeholders replaced by their related values.
+     */
+    public static String transformJson(String sourceJson, String templateJson) {
+        return transformJson(documentContextOf(sourceJson), templateJson);
+    }
+
+    /**
+     * Replaces all placeholders in the specified <i>templateJson</i> with the related values looked up in the
+     * specified <i>sourceContext</i>.
+     *
+     * @param sourceContext the source {@link DocumentContext} to look up placeholder values.
+     * @param templateJson the template JSON string containing the placeholders.
+     * @return the JSON result of the template with placeholders replaced by their related values.
+     */
+    public static String transformJson(DocumentContext sourceContext, String templateJson) {
+        Map<String, Object> placeholders = parsePlaceholders(templateJson, sourceContext);
+        return transformJson(placeholders, templateJson);
+    }
+
+    /**
+     * Replaces all specified <i>placeholders</i> in the specified <i>templateJson</i> with their defined values.
+     *
+     * @param placeholders a {@link Map} with placeholder patterns and replacement values.
+     * @param templateJson the template JSON string containing the placeholders.
+     * @return the JSON result of the template with placeholders replaced by their related values.
+     */
+    public static String transformJson(Map<String, Object> placeholders, String templateJson) {
+        String result = templateJson;
+        for (Entry<String, Object> placeholder : placeholders.entrySet()) {
+            String pattern = placeholder.getKey();
+            String value = String.valueOf(placeholder.getValue());
+            String quotedPattern = QUOTES.apply(pattern);
+            String jsonValue = Json.write(placeholder.getValue());
+            // first replace all occurrences of "$(property.path)" with it's JSON value
+            // and then check for in string replacements like "arbitrary text with $(embedded) placeholder"
+            result = result.replace(quotedPattern, jsonValue).replace(pattern, value);
+        }
+        LOG.debug("transformJson('{}', '{}') -> '{}'", placeholders, templateJson, result);
+        return result;
+    }
+
+    /**
+     * Checks whether the specified <i>value</i> is a keyword pattern and if so returns the keyword generated value.
      *
      * @param value value to be checked.
      * @return a keyword related value if the specified {@code value} is a keyword pattern; otherwise the value itself.
@@ -114,124 +159,67 @@ public class Placeholders {
      * Replaces placeholders and keywords in the specified {@code value} by values found in the specified
      * {@code placeholderSource}.
      *
-     * @param placeholderSource
+     * @param sourceContext the source {@link DocumentContext} to look up placeholder values.
      * @param value
      * @return
      */
-    public static String transformValue(DocumentContext placeholderSource, String value) {
-        Map<String, Object> placeholders = new LinkedHashMap<>();
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(value);
-        while (matcher.find()) {
-            String placeholder = matcher.group();
-            if (placeholders.containsKey(placeholder)) {
+    public static String transformValue(DocumentContext sourceContext, String value) {
+        Map<String, Object> placeholders = parsePlaceholders(value, sourceContext);
+        return transformValue(placeholders, value, false);
+    }
+
+    public static String transformValue(DocumentContext sourceContext, String value, boolean isUrl) {
+        Map<String, Object> placeholders = parsePlaceholders(value, sourceContext);
+        return transformValue(placeholders, value, isUrl);
+    }
+
+    /**
+     * Replaces placeholders and keywords in the specified {@code value} by values found in the specified
+     * {@code placeholderSource}. If {@code isUrl} is {@code true} the value is treated as URL and query string
+     * replacement values will be URL encoded.
+     *
+     * @param placeholders a {@link Map} with placeholder patterns and their replacement values.
+     * @param value the value to transform
+     * @param isUrl indicates whether value is an URL.
+     * @return the transformed value.
+     */
+    public static String transformValue(Map<String, Object> placeholders, String value, boolean isUrl) {
+        for (String key : placeholders.keySet()) {
+            int keyStart = value.indexOf(key);
+            if (keyStart == -1) {
                 continue;
             }
-            placeholders.put(placeholder, populatePlaceholder(placeholder, placeholderSource));
-        }
-        for (String key : placeholders.keySet()) {
-            value = value.replace(key, String.valueOf(placeholders.get(key)));
+            int queryStringStart = (isUrl) ? value.indexOf('?') : -1;
+            String replacement = String.valueOf(placeholders.get(key));
+            if (queryStringStart > 0 && keyStart > queryStringStart) {
+                replacement = urlEncodeValue(replacement);
+            }
+            value = value.replace(key, replacement);
         }
         return value;
     }
 
     /**
-     * Replaces placeholders and keywords in the specified {@code urlToTransform} by values found in the specified
-     * {@code placeholderSource}. If the placeholder is contained in a query string part of the URL it's value will be
-     * URL encoded.
+     * Parses the specified string {@code expression} for placeholder patterns.<br>
+     * <b>Note</b>: placeholders for keywords will get their values immediately even when the optional
+     * {@code sourceContext} is omitted.
      *
-     * @param placeholderSource the {@link DocumentContext} to look for placeholder values.
-     * @param urlToTransform the URL to transform
-     * @return the transformed URL.
-     */
-    public static String transformUrl(DocumentContext placeholderSource, String urlToTransform) {
-        Map<String, Object> placeholders = new LinkedHashMap<>();
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(urlToTransform);
-        while (matcher.find()) {
-            String placeholder = matcher.group();
-            if (placeholders.containsKey(placeholder)) {
-                continue;
-            }
-            placeholders.put(placeholder, populatePlaceholder(placeholder, placeholderSource));
-        }
-        return replaceValuesInUrl(placeholders, urlToTransform);
-    }
-
-    /**
-     * Creates a {@link DocumentContext} for the specified {@code json} string.
-     *
-     * @param json the JSON {@link String} to create the {@link DocumentContext} for.
-     * @return the {@link DocumentContext} for the specified {@code json} string or {@code null} if {@code json} is
-     *         {@code null} or empty ({@code ""}).
-     */
-    public static DocumentContext documentContextOf(String json) {
-        DocumentContext result = null;
-        if (json != null && json.trim().length() > 0) { // ? PARSE_CONTEXT.parse(json) : null;
-            result = JsonPath.parse(json, JSON_CONTEXT_CONFIGURATION_BUILDER.build());
-        }
-        LOG.debug("documentContextOf('{}') -> '{}'", json, describe(result));
-        return result;
-    }
-
-    /**
-     * Parses the specified {@code json} for placeholder patterns.<br>
-     * Note: placeholders for keywords will get their values immediately.
-     *
-     * @param json the JSON {@link String} that may contain placeholders.
+     * @param expression the JSON {@link String} that may contain placeholders.
+     * @param sourceContext the source {@link DocumentContext} to look up placeholder values.
      * @return a {@link Map} containing entries for all found placeholders.
      */
-    private static Map<String, Object> parseJsonBody(String json) {
+    public static Map<String, Object> parsePlaceholders(String expression, DocumentContext sourceContext) {
         Map<String, Object> result = new LinkedHashMap<>();
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(json);
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(expression);
         while (matcher.find()) {
             String placeholder = matcher.group();
             if (result.containsKey(placeholder)) {
                 continue;
             }
-            result.put(placeholder, populatePlaceholder(placeholder));
+            result.put(placeholder, populatePlaceholder(placeholder, sourceContext));
         }
-        LOG.debug("parseJsonBody('{}') -> '{}'", json, result);
+        LOG.debug("parsePlaceholders('{}') -> '{}'", expression, result);
         return result;
-    }
-
-    /**
-     * Traverses the specified {@code placeholders} and parses the specified {@code documentContext} for each
-     * placeholder who's value is {@code null}.
-     *
-     * @param placeholders the {@link Map} of placeholders to parse values for.
-     * @param documentContext the JSON {@link DocumentContext} to look for values.
-     */
-    private static void parsePlaceholderValues(Map<String, Object> placeholders, DocumentContext documentContext) {
-        // if placeholders is null or empty or all values are set we are already done
-        if (placeholders == null || placeholders.isEmpty() || !placeholders.containsValue(null)) {
-            return;
-        }
-
-        for (Entry<String, Object> placeholder : placeholders.entrySet()) {
-            // just look for placeholders who don't have a value yet
-            if (placeholder.getValue() == null) {
-                placeholder.setValue(populatePlaceholder(placeholder.getKey(), documentContext));
-            }
-        }
-        LOG.debug("parsePlaceholderValues('{}', {})", placeholders, describe(documentContext));
-    }
-
-    private static String replaceValuesInJson(Map<String, Object> placeholders, String json) {
-        String result = json;
-        for (Entry<String, Object> placeholder : placeholders.entrySet()) {
-            String pattern = placeholder.getKey();
-            String value = String.valueOf(placeholder.getValue());
-            String quotedPattern = QUOTES.apply(pattern);
-            String jsonValue = Json.write(placeholder.getValue());
-            // first replace all occurrences of "$(property.path)" with it's JSON value
-            // and then check for in string replacements like "arbitrary text with $(embedded) placeholder"
-            result = result.replace(quotedPattern, jsonValue).replace(pattern, value);
-        }
-        LOG.debug("replaceValuesInJson('{}', '{}') -> '{}'", placeholders, json, result);
-        return result;
-    }
-
-    private static Object populatePlaceholder(String pattern) {
-        return populatePlaceholder(pattern, null);
     }
 
     private static Object populatePlaceholder(String pattern, DocumentContext documentContext) {
@@ -249,20 +237,7 @@ public class Placeholders {
         return result;
     }
 
-    private static String replaceValuesInUrl(Map<String, Object> placeholders, String urlToTransform) {
-        for (String key : placeholders.keySet()) {
-            String value = String.valueOf(placeholders.get(key));
-            int queryStringStart = urlToTransform.indexOf('?');
-            int keyStart = urlToTransform.indexOf(key);
-            if (queryStringStart > 0 && keyStart > queryStringStart) {
-                value = encodeValue(value);
-            }
-            urlToTransform = urlToTransform.replace(key, value);
-        }
-        return urlToTransform;
-    }
-
-    private static String encodeValue(String value) {
+    private static String urlEncodeValue(String value) {
         try {
             return URLEncoder.encode(value, "UTF-8");
         } catch (UnsupportedEncodingException e) {
