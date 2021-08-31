@@ -5,7 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.github.tomakehurst.wiremock.common.Json;
-import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallback;
+import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallbackDefinition;
 import com.ninecookies.wiremock.extensions.api.Authentication;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
@@ -17,7 +17,7 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * @author M.Scheepers
  * @since 0.3.1
  */
-public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider<HttpCallback> {
+public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider<HttpCallbackDefinition> {
 
     /**
      * Initialize a new instance of the {@link HttpCallbackHandlerProvider} with the specified arguments.
@@ -34,8 +34,8 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
     }
 
     @Override
-    protected HttpCallback convert(Callback callback, Map<String, Object> placeholders) {
-        HttpCallback callbackDefinition = new HttpCallback();
+    protected HttpCallbackDefinition convert(Callback callback, Map<String, Object> placeholders) {
+        HttpCallbackDefinition callbackDefinition = new HttpCallbackDefinition();
         callbackDefinition.target = Placeholders.transformValue(placeholders, callback.url, true);
         callbackDefinition.delay = callback.delay;
         callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));

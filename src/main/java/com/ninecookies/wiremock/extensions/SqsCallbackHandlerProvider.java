@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.github.tomakehurst.wiremock.common.Json;
-import com.ninecookies.wiremock.extensions.SqsCallbackHandler.SqsCallback;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
 import com.ninecookies.wiremock.extensions.util.Strings;
@@ -16,7 +15,7 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * @since 0.0.1
  *
  */
-public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<SqsCallback> {
+public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<CallbackDefinition> {
 
     /**
      * Initialize a new instance of the {@link SqsCallbackHandlerProvider} with the specified arguments.
@@ -37,18 +36,11 @@ public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<
     }
 
     @Override
-    protected SqsCallback convert(Callback callback, Map<String, Object> placeholders) {
-        SqsCallback data = new SqsCallback();
-        data.target = Placeholders.transformValue(placeholders, callback.queue, false);
-        // check for queue name String.valueOf((Object) null) as a result of transformValue()
-        if ("null".equals(data.queue)) {
-            getLog().warn("unresolvable SQS queue '{}' - ignore task with delay '{}' and data '{}'",
-                    callback.queue, data.delay, data.data);
-            return null;
-        }
-
-        data.delay = callback.delay;
-        data.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
-        return data;
+    protected CallbackDefinition convert(Callback callback, Map<String, Object> placeholders) {
+        CallbackDefinition callbackDefinition = new CallbackDefinition();
+        callbackDefinition.target = Placeholders.transformValue(placeholders, callback.queue, false);
+        callbackDefinition.delay = callback.delay;
+        callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
+        return callbackDefinition;
     }
 }

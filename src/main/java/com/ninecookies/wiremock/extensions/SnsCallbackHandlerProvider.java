@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.github.tomakehurst.wiremock.common.Json;
-import com.ninecookies.wiremock.extensions.SnsCallbackHandler.SnsCallback;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
 import com.ninecookies.wiremock.extensions.util.Strings;
@@ -15,7 +14,7 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * @author M.Scheepers
  * @since 0.3.1
  */
-public class SnsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<SnsCallback> {
+public class SnsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<CallbackDefinition> {
 
     /**
      * Initialize a new instance of the {@link SnsCallbackHandlerProvider} with the specified arguments.
@@ -36,11 +35,11 @@ public class SnsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<
     }
 
     @Override
-    protected SnsCallback convert(Callback callback, Map<String, Object> placeholders) {
-        SnsCallback data = new SnsCallback();
-        data.target = Placeholders.transformValue(placeholders, callback.topic, false);
-        data.delay = callback.delay;
-        data.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
-        return data;
+    protected CallbackDefinition convert(Callback callback, Map<String, Object> placeholders) {
+        CallbackDefinition callbackDefinition = new CallbackDefinition();
+        callbackDefinition.target = Placeholders.transformValue(placeholders, callback.topic, false);
+        callbackDefinition.delay = callback.delay;
+        callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
+        return callbackDefinition;
     }
 }

@@ -27,20 +27,16 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
-import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallback;
+import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallbackDefinition;
 import com.ninecookies.wiremock.extensions.api.Authentication;
 
 /**
  * Implements {@link Runnable} and uses {@link HttpPost} in combination with {@link HttpEntity} and
  * {@link HttpContext} to emit a POST request according to the referenced callback definition.
  */
-public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallback> {
+public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDefinition> {
 
-    public static class HttpCallback extends AbstractCallbackHandler.AbstractCallbackDefinition {
-        /**
-         * The destination URL to POST the data to after delay has elapsed.
-         */
-        public String url;
+    public static class HttpCallbackDefinition extends CallbackDefinition {
         /**
          * The authentication to use for the callback.
          */
@@ -59,11 +55,11 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallback> {
             .build();
 
     private HttpCallbackHandler(ScheduledExecutorService executor, File callbackFile) {
-        super(executor, callbackFile, HttpCallback.class);
+        super(executor, callbackFile, HttpCallbackDefinition.class);
     }
 
     @Override
-    public void handle(HttpCallback callback) throws CallbackException {
+    public void handle(HttpCallbackDefinition callback) throws CallbackException {
         getLog().debug("CallbackHandler.run()");
         try {
             URI uri = URI.create(callback.target);

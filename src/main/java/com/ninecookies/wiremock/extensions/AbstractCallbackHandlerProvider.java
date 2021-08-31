@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.tomakehurst.wiremock.common.Json;
-import com.ninecookies.wiremock.extensions.AbstractCallbackHandler.AbstractCallbackDefinition;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.util.Objects;
 
@@ -25,7 +24,7 @@ import com.ninecookies.wiremock.extensions.util.Objects;
  *
  * @param <T> the concrete callback type to provide a callback handler for.
  */
-public abstract class AbstractCallbackHandlerProvider<T extends AbstractCallbackDefinition>
+public abstract class AbstractCallbackHandlerProvider<T extends CallbackDefinition>
         implements CallbackHandlerProvider {
 
     private final boolean messagingEnbabled;
@@ -66,12 +65,12 @@ public abstract class AbstractCallbackHandlerProvider<T extends AbstractCallback
     }
 
     /**
-     * Implementors have to return a {@link AbstractCallbackDefinition} implementation according to the provided
+     * Implementors have to return a {@link CallbackDefinition} implementation according to the provided
      * {@link Callback}.
      *
      * @param callback the public API {@link Callback} model information.
      * @param placeholders the context for placeholder substitution.
-     * @return a concrete implementation of {@link AbstractCallbackDefinition}.
+     * @return a concrete implementation of {@link CallbackDefinition}.
      */
     protected abstract T convert(Callback callback, Map<String, Object> placeholders);
 
