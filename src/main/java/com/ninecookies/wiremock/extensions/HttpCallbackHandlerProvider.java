@@ -1,10 +1,10 @@
 package com.ninecookies.wiremock.extensions;
 
-import java.io.File;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.github.tomakehurst.wiremock.common.Json;
 import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallback;
 import com.ninecookies.wiremock.extensions.api.Authentication;
 import com.ninecookies.wiremock.extensions.api.Callback;
@@ -25,7 +25,7 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
      * @param executor the {@link ScheduledExecutorService} that runs the created handler.
      */
     public HttpCallbackHandlerProvider(ScheduledExecutorService executor) {
-        super(HttpCallback.class, executor);
+        super(HttpCallbackHandler::of, executor);
     }
 
     @Override
@@ -34,29 +34,23 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
     }
 
     @Override
-    public Runnable get(Callback callback, Map<String, Object> placeholders) {
-        try {
-            HttpCallback data = convert(callback, placeholders);
-            data.url = Placeholders.transformValue(placeholders, callback.url, true);
-            if ("null".equals(data.url)) {
-                getLog().warn("unresolvable callback URL '{}' - ignore task with delay '{}' and data '{}'",
-                        callback.url, data.delay, data.data);
-                return null;
-            }
-
-            if (callback.authentication != null) {
-                data.authentication = Authentication.of(
-                        Placeholders.transformValue(callback.authentication.getUsername()),
-                        Placeholders.transformValue(callback.authentication.getPassword()));
-            }
-            data.traceId = (callback.traceId != null) ? callback.traceId
-                    : UUID.randomUUID().toString().replace("-", "");
-
-            File callbackDefinition = persistCallback(data);
-            return HttpCallbackHandler.of(getExecutorService(), callbackDefinition);
-        } catch (ReflectiveOperationException e) {
-            getLog().error("unable to create HttpCallback instance for '{}'", callback, e);
+    protected HttpCallback convert(Callback callback, Map<String, Object> placeholders) {
+        HttpCallback callbackDefinition = new HttpCallback();
+        callbackDefinition.url = Placeholders.transformValue(placeholders, callback.url, true);
+        if ("null".equals(callbackDefinition.url)) {
+            getLog().warn("unresolvable callback URL '{}' - ignore task with delay '{}' and data '{}'",
+                    callback.url, callbackDefinition.delay, callbackDefinition.data);
             return null;
         }
+        callbackDefinition.delay = callback.delay;
+        callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
+        if (callback.authentication != null) {
+            callbackDefinition.authentication = Authentication.of(
+                    Placeholders.transformValue(callback.authentication.getUsername()),
+                    Placeholders.transformValue(callback.authentication.getPassword()));
+        }
+        callbackDefinition.traceId = (callback.traceId != null) ? callback.traceId
+                : UUID.randomUUID().toString().replace("-", "");
+        return callbackDefinition;
     }
 }

@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import com.github.tomakehurst.wiremock.common.Json;
 import com.ninecookies.wiremock.extensions.AbstractCallbackHandler.AbstractCallbackDefinition;
 import com.ninecookies.wiremock.extensions.api.Callback;
-import com.ninecookies.wiremock.extensions.util.Placeholders;
 
 /**
  * Provides common methods to simplify and unify the creation of callback definitions and their related handlers.
@@ -28,21 +28,22 @@ public abstract class AbstractCallbackHandlerProvider<T extends AbstractCallback
         implements CallbackHandlerProvider {
 
     private final boolean messagingEnbabled;
-    private final Class<T> callbackType;
     private final Logger log;
     private final ScheduledExecutorService executor;
+    private final BiFunction<ScheduledExecutorService, File, Runnable> handlerCreator;
 
     /**
      * Initialize a new instance of the {@link AbstractCallbackHandlerProvider} with the specified arguments.
      *
-     * @param callbackType the {@link Class} of type {@code <T>} that extends {@link AbstractCallbackDefinition}.
+     * @param handlerCreator the method that creates a callback handler for a certain callback type.
      * @param executor the {@link ScheduledExecutorService} that runs the created handler.
      */
-    protected AbstractCallbackHandlerProvider(Class<T> callbackType, ScheduledExecutorService executor) {
+    protected AbstractCallbackHandlerProvider(BiFunction<ScheduledExecutorService, File, Runnable> handlerCreator,
+            ScheduledExecutorService executor) {
         log = LoggerFactory.getLogger(getClass());
         messagingEnbabled = CallbackConfiguration.getInstance().isMessagingEnabled();
-        this.callbackType = callbackType;
         this.executor = executor;
+        this.handlerCreator = handlerCreator;
     }
 
     /**
@@ -55,15 +56,6 @@ public abstract class AbstractCallbackHandlerProvider<T extends AbstractCallback
     }
 
     /**
-     * Gets the scheduled executor service that executes the provided callback handler.
-     *
-     * @return the {@link ScheduledExecutorService} instance.
-     */
-    protected ScheduledExecutorService getExecutorService() {
-        return executor;
-    }
-
-    /**
      * Indicates whether SNS/SQS messaging is enabled by configuration.
      *
      * @return {@code true} if SNS/SQS messaging is enabled; otherwise {@code false}.
@@ -73,31 +65,24 @@ public abstract class AbstractCallbackHandlerProvider<T extends AbstractCallback
     }
 
     /**
-     * Creates a new instance of a callback definition of type {@code <T>} and populates the delay and transformed JSON
-     * data properties according to the provided public API {@link Callback} model information.
+     * Implementors have to return a {@link AbstractCallbackDefinition} implementation according to the provided
+     * {@link Callback}.
      *
      * @param callback the public API {@link Callback} model information.
      * @param placeholders the context for placeholder substitution.
-     * @return a new instance of type {@code <T>}.
-     * @throws ReflectiveOperationException - rethrown but should not occur.
+     * @return a concrete implementation of {@link AbstractCallbackDefinition}.
      */
-    protected T convert(Callback callback, Map<String, Object> placeholders) throws ReflectiveOperationException {
-        T result = callbackType.newInstance();
-        result.delay = callback.delay;
-        result.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
-        // TODO: simplify callback definition
-        // result.target = Placeholders.transformValue(placeholders, getTarget(callback), isUrlTarget());
-        return result;
+    protected abstract T convert(Callback callback, Map<String, Object> placeholders);
+
+    @Override
+    public Runnable get(Callback callback, Map<String, Object> placeholders) {
+        T callbackDefinition = convert(callback, placeholders);
+        if (callbackDefinition == null) {
+            return null;
+        }
+        File callbackDefinitionFile = persistCallback(callbackDefinition);
+        return handlerCreator.apply(executor, callbackDefinitionFile);
     }
-    // TODO: simplify callback definition
-    // /**
-    // * Gets the callback target, either one of HTTP URL, SNS topic or SQS queue.
-    // *
-    // * @return the callback target.
-    // */
-    // protected abstract String getTarget(Callback callback);
-    //
-    // protected abstract boolean isUrlTarget();
 
     /**
      * Persists the specified {@code callbackDefinition} as temporary file in the file system to be picked up by the
@@ -106,7 +91,7 @@ public abstract class AbstractCallbackHandlerProvider<T extends AbstractCallback
      * @param callbackDefinition the {@link Callback} to persist.
      * @return the temporary {@link File} containing the normalized callback definition.
      */
-    protected File persistCallback(T callbackDefinition) {
+    private File persistCallback(T callbackDefinition) {
         try {
             File result = File.createTempFile("callback-json-", ".tmp");
             getLog().debug("callback-json file: {}", result);

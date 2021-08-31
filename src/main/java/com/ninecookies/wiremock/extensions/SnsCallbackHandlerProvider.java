@@ -1,13 +1,11 @@
 package com.ninecookies.wiremock.extensions;
 
-import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.github.tomakehurst.wiremock.common.Json;
 import com.ninecookies.wiremock.extensions.SnsCallbackHandler.SnsCallback;
 import com.ninecookies.wiremock.extensions.api.Callback;
-import com.ninecookies.wiremock.extensions.util.Objects;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
 import com.ninecookies.wiremock.extensions.util.Strings;
 
@@ -25,7 +23,7 @@ public class SnsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<
      * @param executor the {@link ScheduledExecutorService} that runs the created handler.
      */
     public SnsCallbackHandlerProvider(ScheduledExecutorService executor) {
-        super(SnsCallback.class, executor);
+        super(SnsCallbackHandler::of, executor);
     }
 
     @Override
@@ -38,17 +36,16 @@ public class SnsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<
     }
 
     @Override
-    public Runnable get(Callback callback, Map<String, Object> placeholders) {
-        SnsCallback data = Objects.convert(callback, SnsCallback.class);
-        String topic = data.topic;
-        data.topic = Placeholders.transformValue(placeholders, topic, false);
+    protected SnsCallback convert(Callback callback, Map<String, Object> placeholders) {
+        SnsCallback data = new SnsCallback();
+        data.topic = Placeholders.transformValue(placeholders, callback.topic, false);
         if ("null".equals(data.topic)) {
-            getLog().warn("unresolvable SNS topic '{}' - ignore task to: '{}' with delay '{}' and data '{}'",
-                    topic, data.topic, data.delay, data.data);
+            getLog().warn("unresolvable SNS topic '{}' - ignore task with delay '{}' and data '{}'",
+                    callback.topic, data.delay, data.data);
             return null;
         }
-        data.data = Placeholders.transformJson(placeholders, Json.write(data.data));
-        File callbackDefinition = persistCallback(data);
-        return SnsCallbackHandler.of(getExecutorService(), callbackDefinition);
+        data.delay = callback.delay;
+        data.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
+        return data;
     }
 }
