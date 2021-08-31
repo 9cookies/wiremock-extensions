@@ -66,7 +66,7 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallback> {
     public void handle(HttpCallback callback) throws CallbackException {
         getLog().debug("CallbackHandler.run()");
         try {
-            URI uri = URI.create(callback.url);
+            URI uri = URI.create(callback.target);
             HttpContext context = createHttpContext(uri, callback.authentication);
             HttpEntity content = new StringEntity((String) callback.data, ContentType.APPLICATION_JSON);
             HttpPost post = new HttpPost(uri);

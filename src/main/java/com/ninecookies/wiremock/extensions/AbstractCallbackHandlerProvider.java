@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.github.tomakehurst.wiremock.common.Json;
 import com.ninecookies.wiremock.extensions.AbstractCallbackHandler.AbstractCallbackDefinition;
 import com.ninecookies.wiremock.extensions.api.Callback;
+import com.ninecookies.wiremock.extensions.util.Objects;
 
 /**
  * Provides common methods to simplify and unify the creation of callback definitions and their related handlers.
@@ -77,7 +78,10 @@ public abstract class AbstractCallbackHandlerProvider<T extends AbstractCallback
     @Override
     public Runnable get(Callback callback, Map<String, Object> placeholders) {
         T callbackDefinition = convert(callback, placeholders);
-        if (callbackDefinition == null) {
+        if ("null".equals(callbackDefinition.target)) {
+            getLog().warn("unresolvable callback target '{}' - ignore {} task with delay '{}' and data '{}'",
+                    Objects.coalesce(callback.url, Objects.coalesce(callback.queue, callback.topic)),
+                    callbackDefinition.getClass().getSimpleName(), callbackDefinition.delay, callbackDefinition.data);
             return null;
         }
         File callbackDefinitionFile = persistCallback(callbackDefinition);

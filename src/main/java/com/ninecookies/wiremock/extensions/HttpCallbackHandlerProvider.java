@@ -36,12 +36,7 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
     @Override
     protected HttpCallback convert(Callback callback, Map<String, Object> placeholders) {
         HttpCallback callbackDefinition = new HttpCallback();
-        callbackDefinition.url = Placeholders.transformValue(placeholders, callback.url, true);
-        if ("null".equals(callbackDefinition.url)) {
-            getLog().warn("unresolvable callback URL '{}' - ignore task with delay '{}' and data '{}'",
-                    callback.url, callbackDefinition.delay, callbackDefinition.data);
-            return null;
-        }
+        callbackDefinition.target = Placeholders.transformValue(placeholders, callback.url, true);
         callbackDefinition.delay = callback.delay;
         callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
         if (callback.authentication != null) {

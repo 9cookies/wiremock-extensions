@@ -33,11 +33,10 @@ public abstract class AbstractCallbackHandler<T extends AbstractCallbackDefiniti
          * The object representing arbitrary callback data.
          */
         public Object data;
-        // TODO: simplify callback definition
-        // /**
-        // * The callback target, either one of HTTP URL, SNS topic or SQS queue.
-        // */
-        // public String target;
+        /**
+         * The callback target, either one of HTTP URL, SNS topic or SQS queue.
+         */
+        public String target;
     }
 
     /**

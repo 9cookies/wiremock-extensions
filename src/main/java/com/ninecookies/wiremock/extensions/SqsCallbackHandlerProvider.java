@@ -39,7 +39,7 @@ public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<
     @Override
     protected SqsCallback convert(Callback callback, Map<String, Object> placeholders) {
         SqsCallback data = new SqsCallback();
-        data.queue = Placeholders.transformValue(placeholders, callback.queue, false);
+        data.target = Placeholders.transformValue(placeholders, callback.queue, false);
         // check for queue name String.valueOf((Object) null) as a result of transformValue()
         if ("null".equals(data.queue)) {
             getLog().warn("unresolvable SQS queue '{}' - ignore task with delay '{}' and data '{}'",

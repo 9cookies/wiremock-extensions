@@ -38,12 +38,7 @@ public class SnsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<
     @Override
     protected SnsCallback convert(Callback callback, Map<String, Object> placeholders) {
         SnsCallback data = new SnsCallback();
-        data.topic = Placeholders.transformValue(placeholders, callback.topic, false);
-        if ("null".equals(data.topic)) {
-            getLog().warn("unresolvable SNS topic '{}' - ignore task with delay '{}' and data '{}'",
-                    callback.topic, data.delay, data.data);
-            return null;
-        }
+        data.target = Placeholders.transformValue(placeholders, callback.topic, false);
         data.delay = callback.delay;
         data.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
         return data;

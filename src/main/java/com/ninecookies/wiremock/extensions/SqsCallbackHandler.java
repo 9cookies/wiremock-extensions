@@ -39,8 +39,8 @@ public class SqsCallbackHandler extends AbstractCallbackHandler<SqsCallback> {
                 message = Json.write(callback.data);
             }
             try {
-                publisher.sendMessage(callback.queue, message);
-                getLog().info("message published to '{}'", callback.queue);
+                publisher.sendMessage(callback.target, message);
+                getLog().info("message published to '{}'", callback.target);
             } catch (JMSException e) {
                 throw new RetryCallbackException(e);
             }

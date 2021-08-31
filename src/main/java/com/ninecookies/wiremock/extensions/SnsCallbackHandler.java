@@ -38,8 +38,8 @@ public class SnsCallbackHandler extends AbstractCallbackHandler<SnsCallback> {
             } else {
                 messageJson = Json.write(callback.data);
             }
-            publisher.sendMessage(callback.topic, messageJson);
-            getLog().info("message published to '{}'", callback.topic);
+            publisher.sendMessage(callback.target, messageJson);
+            getLog().info("message published to '{}'", callback.target);
         } catch (Exception e) {
             throw new RetryCallbackException(e);
         }

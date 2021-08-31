@@ -30,6 +30,20 @@ public class Objects {
     }
 
     /**
+     * Returns the first non {@code null} value of the specified values.
+     * <p>
+     * <b>Note</b>: if both values are {@code null} the result will also be {@code null}.
+     *
+     * @param <T> the type of the values.
+     * @param first the first value.
+     * @param second the second value.
+     * @return the first value that is not {@code null} or {@code null} if both values are {@code null}.
+     */
+    public static <T> T coalesce(T first, T second) {
+        return (first != null) ? first : second;
+    }
+
+    /**
      * Describes the specified <i>response</i> for logging purposes.
      *
      * @param response the wiremock {@link Response} to describe.
