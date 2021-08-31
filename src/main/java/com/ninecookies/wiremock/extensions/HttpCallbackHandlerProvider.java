@@ -17,7 +17,7 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * @author M.Scheepers
  * @since 0.3.1
  */
-public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider<HttpCallbackDefinition> {
+public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider {
 
     /**
      * Initialize a new instance of the {@link HttpCallbackHandlerProvider} with the specified arguments.

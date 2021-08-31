@@ -24,8 +24,7 @@ import com.ninecookies.wiremock.extensions.util.Objects;
  *
  * @param <T> the concrete callback type to provide a callback handler for.
  */
-public abstract class AbstractCallbackHandlerProvider<T extends CallbackDefinition>
-        implements CallbackHandlerProvider {
+public abstract class AbstractCallbackHandlerProvider implements CallbackHandlerProvider {
 
     private final boolean messagingEnbabled;
     private final Logger log;
@@ -72,11 +71,11 @@ public abstract class AbstractCallbackHandlerProvider<T extends CallbackDefiniti
      * @param placeholders the context for placeholder substitution.
      * @return a concrete implementation of {@link CallbackDefinition}.
      */
-    protected abstract T convert(Callback callback, Map<String, Object> placeholders);
+    protected abstract CallbackDefinition convert(Callback callback, Map<String, Object> placeholders);
 
     @Override
     public Runnable get(Callback callback, Map<String, Object> placeholders) {
-        T callbackDefinition = convert(callback, placeholders);
+        CallbackDefinition callbackDefinition = convert(callback, placeholders);
         if ("null".equals(callbackDefinition.target)) {
             getLog().warn("unresolvable callback target '{}' - ignore {} task with delay '{}' and data '{}'",
                     Objects.coalesce(callback.url, Objects.coalesce(callback.queue, callback.topic)),
@@ -94,7 +93,7 @@ public abstract class AbstractCallbackHandlerProvider<T extends CallbackDefiniti
      * @param callbackDefinition the {@link Callback} to persist.
      * @return the temporary {@link File} containing the normalized callback definition.
      */
-    private File persistCallback(T callbackDefinition) {
+    private File persistCallback(CallbackDefinition callbackDefinition) {
         try {
             File result = File.createTempFile("callback-json-", ".tmp");
             getLog().debug("callback-json file: {}", result);

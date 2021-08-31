@@ -15,7 +15,7 @@ import com.ninecookies.wiremock.extensions.util.Strings;
  * @since 0.0.1
  *
  */
-public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider<CallbackDefinition> {
+public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider {
 
     /**
      * Initialize a new instance of the {@link SqsCallbackHandlerProvider} with the specified arguments.
