@@ -13,6 +13,7 @@ import static com.jayway.restassured.RestAssured.given;
 import static com.ninecookies.wiremock.extensions.util.Maps.entry;
 import static com.ninecookies.wiremock.extensions.util.Maps.mapOf;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 
 import java.util.Map;
 import java.util.UUID;
@@ -317,6 +318,63 @@ public class WiremockExtensionsIT {
         assertEquals(message.get("data").textValue(), "sqs-data");
     }
 
+    @Test
+    public void testSqsCommonContext() {
+        String requestPath = "/request/common/context";
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+        String requestBody = "{\"code\":\"request-code\"}";
+        String sqsMessage1Id = UUID.randomUUID().toString();
+        String sqsMessage2Id = UUID.randomUUID().toString();
+
+        Callbacks callbacks = Callbacks.of(
+                Callback.ofQueueMessage(100, QUEUE_NAME, mapOf(entry("response_id", "$(response.id)"),
+                        entry("data", "sqs-data-1"),
+                        entry("request_code", "$(request.code)"),
+                        entry("timestamp", "$(!Instant.data-1)"),
+                        entry("common_timestamp", "$(!OffsetDateTime)"),
+                        entry("common_uuid", "$(!UUID.common)"),
+                        entry("common_name", "named $(!UUID.common)"),
+                        entry("messageId", sqsMessage1Id))),
+                Callback.ofQueueMessage(200, QUEUE_NAME, mapOf(entry("response_id", "$(response.id)"),
+                        entry("data", "sqs-data-2"),
+                        entry("request_code", "$(request.code)"),
+                        entry("timestamp", "$(!Instant.data-2)"),
+                        entry("common_timestamp", "$(!OffsetDateTime)"),
+                        entry("common_uuid", "$(!UUID.common)"),
+                        entry("common_name", "named $(!UUID.common)"),
+                        entry("messageId", sqsMessage2Id))));
+
+        stubFor(post(urlEqualTo(requestPath))
+                .withPostServeAction("callback-simulator", callbacks)
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestPath)
+                .then().statusCode(201)
+                .extract().asString();
+        String responseId = Json.node(responseJson).get("id").textValue();
+
+        String messageText = queueMonitor.waitForMessage(sqsMessage1Id);
+        JsonNode message1 = Json.node(messageText);
+        assertEquals(message1.get("response_id").textValue(), responseId);
+        assertEquals(message1.get("request_code").textValue(), "request-code");
+        assertEquals(message1.get("data").textValue(), "sqs-data-1");
+
+        messageText = queueMonitor.waitForMessage(sqsMessage2Id);
+        JsonNode message2 = Json.node(messageText);
+        assertEquals(message2.get("response_id").textValue(), responseId);
+        assertEquals(message2.get("request_code").textValue(), "request-code");
+        assertEquals(message2.get("data").textValue(), "sqs-data-2");
+        assertEquals(message2.get("common_uuid").textValue(), message1.get("common_uuid").textValue());
+        assertEquals(message2.get("common_name").textValue(), message1.get("common_name").textValue());
+        assertEquals(message2.get("common_timestamp").textValue(), message1.get("common_timestamp").textValue());
+        assertNotEquals(message2.get("timestamp").textValue(), message1.get("timestamp").textValue());
+    }
+
     /*
      * privates below
      */
@@ -359,5 +417,4 @@ public class WiremockExtensionsIT {
 
         LOG.info("waited for {} millis for local stack!", System.currentTimeMillis() - start);
     }
-
 }

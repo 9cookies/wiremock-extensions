@@ -6,23 +6,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.jms.JMSException;
 
 import com.github.tomakehurst.wiremock.common.Json;
-import com.ninecookies.wiremock.extensions.SqsCallbackHandler.SqsCallback;
 
 /**
  * Extends the {@link AbstractCallbackHandler} and uses {@link SqsMessagePublisher} to publish an
  * SQS queue message according to the callback definition.
  */
-public class SqsCallbackHandler extends AbstractCallbackHandler<SqsCallback> {
-
-    public static class SqsCallback extends AbstractCallbackHandler.AbstractCallback {
-        /**
-         * The destination queue to send the data to after delay has elapsed.
-         */
-        public String queue;
-    }
+public class SqsCallbackHandler extends AbstractCallbackHandler<CallbackDefinition> {
 
     private SqsCallbackHandler(ScheduledExecutorService executor, File callbackFile) {
-        super(executor, callbackFile, SqsCallback.class);
+        super(executor, callbackFile, CallbackDefinition.class);
     }
 
     public static Runnable of(ScheduledExecutorService executor, File callbackFile) {
@@ -30,7 +22,7 @@ public class SqsCallbackHandler extends AbstractCallbackHandler<SqsCallback> {
     }
 
     @Override
-    public void handle(SqsCallback callback) throws CallbackException {
+    public void handle(CallbackDefinition callback) throws CallbackException {
         try (SqsMessagePublisher publisher = new SqsMessagePublisher()) {
             String message;
             if (callback.data instanceof String) {
@@ -39,8 +31,8 @@ public class SqsCallbackHandler extends AbstractCallbackHandler<SqsCallback> {
                 message = Json.write(callback.data);
             }
             try {
-                publisher.sendMessage(callback.queue, message);
-                getLog().info("message published to '{}'", callback.queue);
+                publisher.sendMessage(callback.target, message);
+                getLog().info("message published to '{}'", callback.target);
             } catch (JMSException e) {
                 throw new RetryCallbackException(e);
             }

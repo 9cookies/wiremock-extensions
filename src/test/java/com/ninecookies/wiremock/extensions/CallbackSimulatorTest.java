@@ -217,8 +217,25 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
         String responseBody = "{\"id\":\"$(!UUID)\"}";
         String callbackUrl = "http://localhost:" + SERVER_PORT + "/multiple/callbacks";
 
-        CallbackData callbackData1 = CallbackData.of("arbitrary-data-1");
-        CallbackData callbackData2 = CallbackData.of("arbitrary-data-2");
+        Object data = mapOf(
+                entry("id", "$(!Random.id)"),
+                entry("user", "$(!Random.user)"),
+                entry("name", "name $(!Random.id)"));
+
+        Object callbackData1 = mapOf(
+                entry("name", "callback-data-1"),
+                entry("code", "$(request.code)"),
+                entry("uuid", "$(response.id)"),
+                entry("timestamp", "$(!Instant.cb1)"),
+                entry("data", data));
+
+        Object callbackData2 = mapOf(
+                entry("name", "callback-data-2"),
+                entry("code", "$(request.code)"),
+                entry("uuid", "$(response.id)"),
+                entry("timestamp", "$(!Instant.cb2)"),
+                entry("data", data));
+
         Callbacks arguments = Callbacks.of(
                 Callback.of(100, callbackUrl, callbackData1),
                 Callback.of(500, callbackUrl, callbackData2));
@@ -241,15 +258,15 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
         String id = Json.node(responseJson).get("id").textValue();
         Thread.sleep(250);
         verify(1, postRequestedFor(urlEqualTo(callbackPath))
-                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData1.value + "')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData1.timestamp + "')]")));
+                .withRequestBody(matchingJsonPath("$.[?(@.uuid == '" + id + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.name == 'callback-data-1')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.code == 'b63868c0')]")));
 
         Thread.sleep(450);
         verify(1, postRequestedFor(urlEqualTo(callbackPath))
-                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData2.value + "')]"))
-                .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData2.timestamp + "')]")));
+                .withRequestBody(matchingJsonPath("$.[?(@.uuid == '" + id + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.name == 'callback-data-2')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.code == 'b63868c0')]")));
     }
 
     @Test

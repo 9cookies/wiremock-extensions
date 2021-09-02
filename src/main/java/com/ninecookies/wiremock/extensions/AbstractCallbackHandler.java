@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.tomakehurst.wiremock.common.Json;
-import com.ninecookies.wiremock.extensions.AbstractCallbackHandler.AbstractCallback;
 
 /**
  * Represents the base class for callback handlers.
@@ -19,24 +18,11 @@ import com.ninecookies.wiremock.extensions.AbstractCallbackHandler.AbstractCallb
  * @author M.Scheepers
  * @since 0.3.0
  */
-public abstract class AbstractCallbackHandler<T extends AbstractCallback> implements Runnable {
+public abstract class AbstractCallbackHandler<T extends CallbackDefinition> implements Runnable {
 
     /**
-     * Represents the base class for callback definitions.
-     */
-    public static abstract class AbstractCallback {
-        /**
-         * The period of time in milliseconds to wait before the callback {@link #data} is sent.
-         */
-        public long delay;
-        /**
-         * The object representing arbitrary callback data.
-         */
-        public Object data;
-    }
-
-    /**
-     * To be thrown by {@link AbstractCallbackHandler#handle(AbstractCallback)} method if callback must not be retried.
+     * To be thrown by {@link AbstractCallbackHandler#handle(CallbackDefinition)} method if callback must not be
+     * retried.
      */
     public static class CallbackException extends Exception {
         private static final long serialVersionUID = -1287146336431043241L;
@@ -55,7 +41,8 @@ public abstract class AbstractCallbackHandler<T extends AbstractCallback> implem
     }
 
     /**
-     * To be thrown by {@link AbstractCallbackHandler#handle(AbstractCallback)} method if callback should be retried.
+     * To be thrown by {@link AbstractCallbackHandler#handle(CallbackDefinition)} method if callback should be
+     * retried.
      */
     public static class RetryCallbackException extends CallbackException {
         private static final long serialVersionUID = -4687718028554157142L;

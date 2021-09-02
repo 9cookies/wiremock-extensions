@@ -4,23 +4,15 @@ import java.io.File;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.github.tomakehurst.wiremock.common.Json;
-import com.ninecookies.wiremock.extensions.SnsCallbackHandler.SnsCallback;
 
 /**
  * Extends the {@link AbstractCallbackHandler} and uses {@link SnsMessagePublisher} to publish an
  * SNS topic message according to the callback definition.
  */
-public class SnsCallbackHandler extends AbstractCallbackHandler<SnsCallback> {
-
-    public static class SnsCallback extends AbstractCallbackHandler.AbstractCallback {
-        /**
-         * The destination topic to send the data to after delay has elapsed.
-         */
-        public String topic;
-    }
+public class SnsCallbackHandler extends AbstractCallbackHandler<CallbackDefinition> {
 
     private SnsCallbackHandler(ScheduledExecutorService executor, File callbackFile) {
-        super(executor, callbackFile, SnsCallback.class);
+        super(executor, callbackFile, CallbackDefinition.class);
     }
 
     private static SnsMessagePublisher publisher = new SnsMessagePublisher();
@@ -30,7 +22,7 @@ public class SnsCallbackHandler extends AbstractCallbackHandler<SnsCallback> {
     }
 
     @Override
-    public void handle(SnsCallback callback) throws CallbackException {
+    public void handle(CallbackDefinition callback) throws CallbackException {
         try {
             String messageJson;
             if (callback.data instanceof String) {
@@ -38,8 +30,8 @@ public class SnsCallbackHandler extends AbstractCallbackHandler<SnsCallback> {
             } else {
                 messageJson = Json.write(callback.data);
             }
-            publisher.sendMessage(callback.topic, messageJson);
-            getLog().info("message published to '{}'", callback.topic);
+            publisher.sendMessage(callback.target, messageJson);
+            getLog().info("message published to '{}'", callback.target);
         } catch (Exception e) {
             throw new RetryCallbackException(e);
         }
