@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.tomakehurst.wiremock.common.Json;
+import com.github.tomakehurst.wiremock.core.Admin;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.util.Objects;
 
@@ -69,13 +70,14 @@ public abstract class AbstractCallbackHandlerProvider implements CallbackHandler
      *
      * @param callback the public API {@link Callback} model information.
      * @param placeholders the context for placeholder substitution.
+     * @param admin A wiremock {@link Admin} implementation.
      * @return a concrete implementation of {@link CallbackDefinition}.
      */
-    protected abstract CallbackDefinition convert(Callback callback, Map<String, Object> placeholders);
+    protected abstract CallbackDefinition convert(Callback callback, Map<String, Object> placeholders, Admin admin);
 
     @Override
-    public Runnable get(Callback callback, Map<String, Object> placeholders) {
-        CallbackDefinition callbackDefinition = convert(callback, placeholders);
+    public Runnable get(Callback callback, Map<String, Object> placeholders, Admin admin) {
+        CallbackDefinition callbackDefinition = convert(callback, placeholders, admin);
         if ("null".equals(callbackDefinition.target)) {
             getLog().warn("unresolvable callback target '{}' - ignore {} task with delay '{}' and data '{}'",
                     Objects.coalesce(callback.url, Objects.coalesce(callback.queue, callback.topic)),

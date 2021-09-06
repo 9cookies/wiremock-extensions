@@ -1,5 +1,7 @@
 package com.ninecookies.wiremock.extensions;
 
+import static com.ninecookies.wiremock.extensions.util.Objects.coalesce;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -88,10 +90,12 @@ public class CallbackSimulator extends PostServeAction {
                 if (!provider.supports(callback)) {
                     continue;
                 }
-                Runnable handler = provider.get(callback, placeholders);
+                Runnable handler = provider.get(callback, placeholders, admin);
                 if (handler != null) {
                     LOG.info("instance {} - scheduling callback task to: '{}' with delay '{}' and data '{}'",
-                            instance, callback.url, callback.delay, callback.data);
+                            instance,
+                            coalesce(callback.url, coalesce(callback.topic, callback.queue)), callback.delay,
+                            callback.data);
                     executor.schedule(handler, callback.delay, TimeUnit.MILLISECONDS);
                 }
             }

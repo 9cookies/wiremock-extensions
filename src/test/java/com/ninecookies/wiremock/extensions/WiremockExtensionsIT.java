@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.reset;
 import static com.github.tomakehurst.wiremock.client.WireMock.resetAllRequests;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.jayway.restassured.RestAssured.given;
 import static com.ninecookies.wiremock.extensions.util.Maps.entry;
@@ -373,6 +374,53 @@ public class WiremockExtensionsIT {
         assertEquals(message2.get("common_name").textValue(), message1.get("common_name").textValue());
         assertEquals(message2.get("common_timestamp").textValue(), message1.get("common_timestamp").textValue());
         assertNotEquals(message2.get("timestamp").textValue(), message1.get("timestamp").textValue());
+    }
+
+    @Test
+    public void testCallbackWithVerify() throws InterruptedException {
+
+        String postUrl = "/callback/with/verification";
+        String postData = "{\"name\":\"john doe\"}";
+
+        String responseData = "{\"id\":\"$(!UUID)\",\"name\":\"$(name)\"}";
+
+        String callbackPath = "/result/verification";
+        String callbackResponseData = "{\"error_code\":\"my-fancy-error\"}";
+        Integer callbackResponseStatus = 409;
+
+        String callbackUrl = "http://host.docker.internal:" + SERVER_PORT + callbackPath;
+
+        Callback callback = Callback.of(100, callbackUrl, mapOf(entry("data", "arbitrary-data")));
+        callback.expectedHttpStatus = callbackResponseStatus;
+        String sqsMessageId = UUID.randomUUID().toString();
+
+        stubFor(post(urlEqualTo(postUrl))
+                .withPostServeAction("callback-simulator", Callbacks.of(
+                        callback,
+                        Callback.ofQueueMessage(100, QUEUE_NAME, mapOf(entry("messageId", sqsMessageId)))))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseData)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(200)));
+
+        stubFor(post(urlPathEqualTo(callbackPath)).willReturn(aResponse()
+                .withHeader("content-type", "application/json")
+                .withBody(callbackResponseData)
+                .withTransformers("json-body-transformer")
+                .withStatus(callbackResponseStatus)));
+
+        given().body(postData).contentType("application/json")
+                .when().post(postUrl)
+                .then().statusCode(200);
+
+        queueMonitor.waitForMessage(sqsMessageId);
+
+        verify(1, postRequestedFor(urlPathEqualTo(callbackPath)));
+        verify(1, postRequestedFor(urlPathEqualTo("/callback/result"))
+                .withRequestBody(matchingJsonPath("$.[?(@.target == '" + callbackUrl + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.response.status == " + callbackResponseStatus + ")]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.response.body == '" + callbackResponseData + "')]")));
     }
 
     /*

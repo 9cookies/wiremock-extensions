@@ -87,6 +87,8 @@ public abstract class AbstractCallbackHandler<T extends CallbackDefinition> impl
             } else {
                 log.info("publishing of {} will be retried", type.getSimpleName(), e);
             }
+        } catch (Exception e) {
+            log.error("error during callback handling", e);
         } finally {
             if (cleanup) {
                 deleteCallback();

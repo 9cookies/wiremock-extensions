@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.github.tomakehurst.wiremock.common.Json;
+import com.github.tomakehurst.wiremock.core.Admin;
 import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallbackDefinition;
 import com.ninecookies.wiremock.extensions.api.Authentication;
 import com.ninecookies.wiremock.extensions.api.Callback;
@@ -34,11 +35,13 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
     }
 
     @Override
-    protected HttpCallbackDefinition convert(Callback callback, Map<String, Object> placeholders) {
+    protected HttpCallbackDefinition convert(Callback callback, Map<String, Object> placeholders, Admin admin) {
         HttpCallbackDefinition callbackDefinition = new HttpCallbackDefinition();
-        callbackDefinition.target = Placeholders.transformValue(placeholders, callback.url, true);
+        callbackDefinition.expectedHttpStatus = callback.expectedHttpStatus;
         callbackDefinition.delay = callback.delay;
+        callbackDefinition.target = Placeholders.transformValue(placeholders, callback.url, true);
         callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
+        callbackDefinition.localWiremockPort = admin.getOptions().portNumber();
         if (callback.authentication != null) {
             callbackDefinition.authentication = Authentication.of(
                     Placeholders.transformValue(callback.authentication.getUsername()),

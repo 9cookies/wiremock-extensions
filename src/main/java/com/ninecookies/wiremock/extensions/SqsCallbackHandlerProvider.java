@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.github.tomakehurst.wiremock.common.Json;
+import com.github.tomakehurst.wiremock.core.Admin;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.util.Placeholders;
 import com.ninecookies.wiremock.extensions.util.Strings;
@@ -36,7 +37,7 @@ public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider 
     }
 
     @Override
-    protected CallbackDefinition convert(Callback callback, Map<String, Object> placeholders) {
+    protected CallbackDefinition convert(Callback callback, Map<String, Object> placeholders, Admin admin) {
         CallbackDefinition callbackDefinition = new CallbackDefinition();
         callbackDefinition.target = Placeholders.transformValue(placeholders, callback.queue, false);
         callbackDefinition.delay = callback.delay;

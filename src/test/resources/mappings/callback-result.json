@@ -1,0 +1,9 @@
+{
+    "request": {
+        "url": "/callback/result",
+        "method": "POST"
+    },
+    "response": {
+        "status": 204
+    }
+}
