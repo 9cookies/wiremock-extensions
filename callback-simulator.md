@@ -127,7 +127,7 @@ The only additional property for SQS callbacks is the `queue` and for SNS callba
 
 ### HTTP Callbacks
 
-HTTP provides some more properties compared to SQS. Beside the obvious required `url` also the optional support for `authentication` and request identification using a `traceId` is implemented. Similar to the queue property for SQS callbacks the url, username and password properties may contain placeholders and keywords.
+HTTP provides some more properties compared to SQS. Beside the obvious required `url` also the optional support for `authentication` and request identification using a `traceId` is implemented. Similar to the topic or queue property for AWS SNS/SQS callbacks the `url`, `username` and `password` properties may contain placeholders and keywords. 
 
 #### Request identification
 
@@ -159,10 +159,48 @@ The callback requests emitted by the callback-simulator will contain the `X-Rps-
         "password": "$(!ENV[CALLBACK_PASSWORD])"
     },
     "traceId": "my-trace-identifier",
+    "expectedHttpStatus": 400,
     "data": {
-        "json representation": "of MyCallbackPayload"
+        "json representation": "of invalid MyCallbackPayload"
     }
 }
+```
+
+#### Verification
+
+In contrast to SNS/SQS callbacks HTTP implementation get's a synchronous response status. By default a 2xx HTTP status result is considered successful for a callback request, but for use case specific expectations, e.g. duplicate callback request to the same resource, it is possible to specify the optional `expectedHttpStatus` to define the HTTP status value to indicates success.
+
+Successful execution of a callback is recorded in the WireMock journal with URL `/callback/result` and the report payload  provides the absolute callback request URL as well as response status and body as shown by the example:
+
+```json
+{
+  "result" : "success",
+  "target" : "http://localhost:8080/my/listening/callback/url",
+  "response" : {
+    "status" : 204,
+    "body" : "null"
+  }
+}
+```
+
+```json
+{
+  "result" : "success",
+  "target" : "http://localhost:8080/my/listening/callback/url",
+  "response" : {
+    "status" : 400,
+    "body" : "{\"error_code\":\"my-fancy-error\"}"
+  }
+}
+```
+
+Using WireMocks built-in [verification mechanism](http://wiremock.org/docs/verifying/) a successful HTTP callback results can be verified as follows:
+
+```java
+verify(1, postRequestedFor(urlPathEqualTo("/callback/result"))
+        .withRequestBody(matchingJsonPath("$.[?(@.target == 'http://localhost:8080/my/listening/callback/url')]"))
+        .withRequestBody(matchingJsonPath("$.[?(@.response.status == 400)]"))
+        .withRequestBody(matchingJsonPath("$.[?(@.response.body =~ /.*my-fancy-error.*/i)]")));
 ```
 
 ## Stubbing
