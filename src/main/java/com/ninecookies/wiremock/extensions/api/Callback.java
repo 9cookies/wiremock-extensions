@@ -41,6 +41,11 @@ public class Callback {
      * The JSON object representing arbitrary callback data.
      */
     public Object data;
+    /**
+     * The expected HTTP response status for the callback.
+     * If omitted all 2xx HTTP status results are considered successful.
+     */
+    public Integer expectedHttpStatus;
 
     /**
      * Create a new instance for an SQS message {@link Callback} definition.
@@ -112,11 +117,29 @@ public class Callback {
      * @return a new {@link Callback} instance ready to use.
      */
     public static Callback of(int delay, String url, String username, String password, String traceId, Object data) {
+        return of(delay, url, username, password, traceId, data, null);
+    }
+
+    /**
+     * Creates a new instance for a {@link Callback} definition with Basic authentication.
+     *
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param url the destination URL for the callback's POST data.
+     * @param username the user name for the callback authentication.
+     * @param password the password for the callback authentication.
+     * @param traceId the trace / request identifier to use for the callback.
+     * @param data an arbitrary JSON object representing the callback data to POST.
+     * @param expectedHttpStatus the expected HTTP status code for the callback POST request (defaults to all 2xx).
+     * @return a new {@link Callback} instance ready to use.
+     */
+    public static Callback of(int delay, String url, String username, String password, String traceId, Object data,
+            Integer expectedHttpStatus) {
         Callback result = new Callback();
         result.delay = delay;
         result.url = url;
         result.data = data;
         result.traceId = traceId;
+        result.expectedHttpStatus = expectedHttpStatus;
         if (!Strings.isNullOrEmpty(username) && !Strings.isNullOrEmpty(password)) {
             result.authentication = Authentication.of(username, password);
         }

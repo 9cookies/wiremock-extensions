@@ -2,6 +2,7 @@ package com.ninecookies.wiremock.extensions;
 
 import java.util.Map;
 
+import com.github.tomakehurst.wiremock.core.Admin;
 import com.ninecookies.wiremock.extensions.api.Callback;
 
 /**
@@ -25,8 +26,9 @@ public interface CallbackHandlerProvider {
      *
      * @param callback the public API {@link Callback} model information.
      * @param placeholders the context for placeholder substitution.
+     * @param admin A wiremock {@link Admin} implementation.
      * @return the callback handler implementation according to the {@link Callback} or {@code null} if the callback
      *         target (URL, queue, topic) resolution contains a placeholder or keyword that resolved to {@code "null"}.
      */
-    Runnable get(Callback callback, Map<String, Object> placeholders);
+    Runnable get(Callback callback, Map<String, Object> placeholders, Admin admin);
 }

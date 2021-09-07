@@ -542,6 +542,48 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
         assertTrue(messages.isEmpty());
     }
 
+    @Test
+    public void testCallbackWithVerify() throws InterruptedException {
+
+        String postUrl = "/callback/with/verification";
+        String postData = "{\"name\":\"john doe\"}";
+
+        String responseData = "{\"id\":\"$(!UUID)\",\"name\":\"$(name)\"}";
+
+        String callbackPath = "/result/verification";
+        String callbackResponseData = "{\"error_code\":\"my-fancy-error\"}";
+        Integer callbackResponseStatus = 409;
+
+        String callbackUrl = "http://localhost:" + SERVER_PORT + callbackPath;
+        Callback callback = Callback.of(DELAY, callbackUrl, CallbackData.of("arbitrary-data"));
+        callback.expectedHttpStatus = callbackResponseStatus;
+
+        stubFor(post(urlEqualTo(postUrl))
+                .withPostServeAction("callback-simulator", Callbacks.of(callback))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseData)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(200)));
+
+        stubFor(post(urlPathEqualTo(callbackPath)).willReturn(aResponse()
+                .withHeader("content-type", "application/json")
+                .withBody(callbackResponseData)
+                .withTransformers("json-body-transformer")
+                .withStatus(callbackResponseStatus)));
+
+        given().body(postData).contentType("application/json")
+                .when().post(postUrl)
+                .then().statusCode(200);
+
+        sleep();
+        verify(1, postRequestedFor(urlPathEqualTo(callbackPath)));
+        verify(1, postRequestedFor(urlPathEqualTo("/callback/result"))
+                .withRequestBody(matchingJsonPath("$.[?(@.target == '" + callbackUrl + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.response.status == " + callbackResponseStatus + ")]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.response.body == '" + callbackResponseData + "')]")));
+    }
+
     private void sleep() {
         sleep(SLEEP);
     }

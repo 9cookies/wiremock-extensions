@@ -10,6 +10,15 @@ if [ $? -ne 0 ]; then
 	echo "$(ip -4 route show default | cut -d' ' -f3)    host.docker.internal" >> /etc/hosts
 fi
 
+# create the callback result mapping with lowest priority by default to avoid 404 on report creation
+# Note: we can't simply put the file to the image as the default mapping folder might
+# be replaced by a volume - anyway ensure the folder exists
+if [ ! -d "mappings" ]; then
+  mkdir "mappings"
+fi
+if [ ! -f "mappings/callback-result.json" ]; then
+  echo '{"priority":10,"request":{"url":"/callback/result","method":"POST"},"response":{"status":204}}' > "mappings/callback-result.json"
+fi
 
 # Add `java -jar /wiremock-standalone.jar` as command if needed
 if [ "${1:0:1}" = "-" ]; then
