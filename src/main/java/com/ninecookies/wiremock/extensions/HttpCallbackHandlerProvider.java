@@ -37,11 +37,12 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
     @Override
     protected HttpCallbackDefinition convert(Callback callback, Map<String, Object> placeholders, Admin admin) {
         HttpCallbackDefinition callbackDefinition = new HttpCallbackDefinition();
+        callbackDefinition.localWiremockPort = admin.getOptions().portNumber();
+        callbackDefinition.skipResultReport = admin.getOptions().requestJournalDisabled();
         callbackDefinition.expectedHttpStatus = callback.expectedHttpStatus;
         callbackDefinition.delay = callback.delay;
         callbackDefinition.target = Placeholders.transformValue(placeholders, callback.url, true);
         callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
-        callbackDefinition.localWiremockPort = admin.getOptions().portNumber();
         if (callback.authentication != null) {
             callbackDefinition.authentication = Authentication.of(
                     Placeholders.transformValue(callback.authentication.getUsername()),

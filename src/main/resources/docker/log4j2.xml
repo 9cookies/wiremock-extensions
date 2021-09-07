@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="ERROR" packages="com.vlkan.log4j2.logstash.layout" >
     <Properties>
-        <Property name="logLevel">${sys:wm.logging.level:-${env.WM_LOGGING_LEVEL:-info}}</Property>
+        <Property name="logLevel">${sys:wm.logging.level:-${env.WM_LOGGING_LEVEL:-INFO}}</Property>
     </Properties>
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
@@ -19,7 +19,7 @@
         <Logger name="com.ninecookies.wiremock.extensions" level="${logLevel}" />
         <Logger name="com.amazonaws" level="WARN" />
         <Logger name="com.amazon.sqs" level="WARN" />
-        <Root level="info">
+        <Root level="INFO">
             <AppenderRef ref="console" />
         </Root>
     </Loggers>

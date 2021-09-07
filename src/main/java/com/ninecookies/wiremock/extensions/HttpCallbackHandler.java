@@ -50,17 +50,19 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
          * The request id to use for the callback.
          */
         public String traceId;
-
         /**
          * The expected HTTP response status for the callback.
          * If omitted all 2xx HTTP status results are considered successful.
          */
         public Integer expectedHttpStatus;
-
         /**
          * Port to record success events for verification purposes.
          */
         public Integer localWiremockPort;
+        /**
+         * Ability to skip callback result reporting if journal is disabled.
+         */
+        public boolean skipResultReport;
     }
 
     private static class HttpStatusRange {
@@ -131,6 +133,11 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
     }
 
     private void recordSuccess(HttpCallbackDefinition callback, CallbackResponse response) throws CallbackException {
+        if (callback.skipResultReport) {
+            getLog().debug("journal disabled - skip callback result report for '{}'", callback.target);
+            return;
+        }
+
         URI uri = createURI(String.format("http://localhost:%s/callback/result", callback.localWiremockPort));
 
         Map<String, Object> data = mapOf(
