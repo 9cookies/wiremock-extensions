@@ -1,21 +1,21 @@
 # Change Log
 
-## 2021-mm-dd - <changes>
+## 2021-09-08 - Features - Improvements - Dependencies
 
 Important Notes: - none
 
-Version: 0.3.1
+Version: 0.4.0
 
-Author: - none
+Author: M.Scheepers
 
 ### Features
-- none
+- HTTP callback result reporting and verification
 
 ### Improvements
-- none
+- Shared placeholder context for multiple callbacks in a single stub mapping.
 
-### Fixes
-- none
+### Dependencies
+- httpclient version bumped to 4.5.13
 
 
 ## 2021-03-31 - Features - Improvements
