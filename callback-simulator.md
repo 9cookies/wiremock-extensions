@@ -55,7 +55,7 @@ So with `MAX_RETRIES` set to `3` retries will happen after 5, 10 and 15 seconds 
 
 ### Common Callback Model
 
-The properties shared by all callbacks are the `delay` and the `data` where the delay defines the wait time in seconds the callback will scheduled for when the URL defined in the mapping stub was requested.
+The properties shared by all callbacks are the `delay` and the `data` properties. The delay defines the wait time in milliseconds the callback will be scheduled for, when the URL defined in the mapping stub was requested. The data allows arbitrary JSON.
 
 ```json
 {
