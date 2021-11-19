@@ -43,24 +43,26 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
         callbackDefinition.delay = callback.delay;
         callbackDefinition.target = Placeholders.transformValue(placeholders, callback.url, true);
         callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
-        if (callback.authentication != null) {
-            switch (callback.authentication.getType()) {
-                case BASIC:
-                    callbackDefinition.authentication = Authentication.of(
-                            Placeholders.transformValue(callback.authentication.getUsername()),
-                            Placeholders.transformValue(callback.authentication.getPassword()));
-                    break;
-                case BEARER:
-                    callbackDefinition.authentication = Authentication.of(
-                            Placeholders.transformValue(callback.authentication.getPassword()));
-                    break;
-                default:
-                    throw new IllegalStateException(
-                            "invalid authentication type: " + callback.authentication.getType());
-            }
-        }
+        callbackDefinition.authentication = transformAuthentication(callback.authentication);
         callbackDefinition.traceId = (callback.traceId != null) ? callback.traceId
                 : UUID.randomUUID().toString().replace("-", "");
         return callbackDefinition;
+    }
+
+    private Authentication transformAuthentication(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        switch (authentication.getType()) {
+            case BASIC:
+                return Authentication.of(
+                        Placeholders.transformValue(authentication.getUsername()),
+                        Placeholders.transformValue(authentication.getPassword()));
+            case BEARER:
+                return Authentication.of(
+                        Placeholders.transformValue(authentication.getPassword()));
+            default:
+                throw new IllegalStateException("invalid authentication type: " + authentication.getType());
+        }
     }
 }
