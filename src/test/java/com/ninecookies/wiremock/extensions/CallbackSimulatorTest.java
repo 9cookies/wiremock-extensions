@@ -203,6 +203,48 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
     }
 
     @Test
+    public void testBasicAuthenticatedCallbackWithStubbing() throws InterruptedException {
+        String requestUrl = "/request/basic-auth";
+        String callbackPath = "/callback/with-basic-auth";
+        String username = "john.doe";
+        String password = "john's password";
+
+        String requestBody = "{\"code\":\"b63868c0\","
+                + "\"callbacks\":{\"order_dispatched\":\"http://localhost:" + SERVER_PORT + callbackPath + "\"},"
+                + "\"promised_delivery_at\":\"2019-03-14T16:09:19.748Z\","
+                + "\"preparation_time\":10,\"preparation_buffer\":2}";
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+        String callbackUrl = "$(request.callbacks.order_dispatched)";
+        CallbackData callbackData = CallbackData.of("aritrary-data");
+        Callback callback = Callback.of(DELAY, callbackUrl, callbackData);
+        callback.authentication = Authentication.of(username, password);
+
+        stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", Callbacks.of(callback))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        stubFor(post(urlEqualTo(callbackPath))
+                .withBasicAuth(username, password)
+                .willReturn(aResponse().withStatus(204)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String id = Json.node(responseJson).get("id").textValue();
+        sleep();
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
+                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData.timestamp + "')]")));
+    }
+
+    @Test
     public void testBearerAuthenticatedCallbackWithStubbingAndEnvToken() throws InterruptedException {
         String requestUrl = "/request/bearer-auth";
         String callbackPath = "/callback/with-env-bearer-auth";

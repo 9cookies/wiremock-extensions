@@ -6,29 +6,23 @@ import static com.ninecookies.wiremock.extensions.util.Maps.mapOf;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
-import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.AuthCache;
-import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.client.utils.URIUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.BasicAuthCache;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
@@ -116,13 +110,10 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
         getLog().debug("CallbackHandler.run()");
 
         URI uri = createURI(callback.target);
-        HttpContext context = createHttpContext(uri, callback.authentication);
         HttpPost post = createPostRequest(uri, (String) callback.data);
+        post.addHeader(authenticationToHeader(callback.authentication));
         post.addHeader(RPS_TRACEID_HEADER, callback.traceId);
-        if (callback.authentication != null && callback.authentication.getType() == Type.BEARER) {
-            post.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + callback.authentication.getPassword());
-        }
-        CallbackResponse response = performRequest(post, context);
+        CallbackResponse response = performRequest(post);
 
         HttpStatusRange expectedStatus = new HttpStatusRange(callback.expectedHttpStatus);
         if (expectedStatus.matches(response.statusCode)) {
@@ -153,7 +144,7 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
         String bodyData = Json.write(data);
         HttpPost post = createPostRequest(uri, bodyData);
         try {
-            CallbackResponse reportResponse = performRequest(post, null);
+            CallbackResponse reportResponse = performRequest(post);
             getLog().debug("report post \n{}\n\tto '{}' succeeded: response: {}",
                     bodyData, uri, reportResponse.statusLine);
         } catch (RetryCallbackException e) {
@@ -169,9 +160,9 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
         }
     }
 
-    private CallbackResponse performRequest(HttpPost request, HttpContext context) throws RetryCallbackException {
+    private CallbackResponse performRequest(HttpPost request) throws RetryCallbackException {
         try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-            HttpResponse response = client.execute(request, context);
+            HttpResponse response = client.execute(request);
             return CallbackResponse.of(response.getStatusLine().toString(),
                     response.getStatusLine().getStatusCode(),
                     readEntity(response.getEntity()));
@@ -204,30 +195,19 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
         return result;
     }
 
-    private HttpContext createHttpContext(URI uri, Authentication authentication) throws CallbackException {
-        if (authentication == null
-                // no HttpContext required for BEARER authentication
-                || authentication.getType() == Type.BEARER) {
+    private Header authenticationToHeader(Authentication authentication) throws CallbackException {
+        if (authentication == null) {
             return null;
         }
-
-        CredentialsProvider credentialsProvider = null;
-        switch (authentication.getType()) {
-            case BASIC:
-                credentialsProvider = new BasicCredentialsProvider();
-                credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(
-                        authentication.getUsername(), authentication.getPassword()));
-                break;
-            default:
-                throw new CallbackException("Unsupported authentication type '" + authentication.getType() + "'");
+        if (Type.BASIC == authentication.getType()) {
+            String userPass = String.format("%s:%s", authentication.getUsername(), authentication.getPassword());
+            String base64 = Base64.getEncoder().encodeToString(userPass.getBytes(StandardCharsets.UTF_8));
+            return new BasicHeader(HttpHeaders.AUTHORIZATION, "Basic " + base64);
         }
-        HttpHost host = URIUtils.extractHost(uri);
-        AuthCache authCache = new BasicAuthCache();
-        authCache.put(host, new BasicScheme());
-        HttpClientContext context = HttpClientContext.create();
-        context.setCredentialsProvider(credentialsProvider);
-        context.setAuthCache(authCache);
-        return context;
+        if (Type.BEARER == authentication.getType()) {
+            return new BasicHeader(HttpHeaders.AUTHORIZATION, "Bearer " + authentication.getPassword());
+        }
+        throw new CallbackException("Unsupported authentication type '" + authentication.getType() + "'");
     }
 
     public static Runnable of(ScheduledExecutorService executor, File callbackFile) {
