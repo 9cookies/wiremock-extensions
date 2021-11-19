@@ -157,7 +157,7 @@ The callback requests emitted by the callback-simulator will contain the `X-Rps-
     "url": "$(request.callbackUrl)",
     "authentication":  {
         "type": "BEARER",
-        "password": "$(!ENV[BEARER_TOKEN])"
+        "token": "$(!ENV[BEARER_TOKEN])"
     },
     "traceId": "my-trace-identifier",
     "expectedHttpStatus": 400,

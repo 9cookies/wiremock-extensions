@@ -111,8 +111,9 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
 
         URI uri = createURI(callback.target);
         HttpPost post = createPostRequest(uri, (String) callback.data);
-        post.addHeader(authenticationToHeader(callback.authentication));
         post.addHeader(RPS_TRACEID_HEADER, callback.traceId);
+        post.addHeader(authenticationToHeader(callback.authentication));
+
         CallbackResponse response = performRequest(post);
 
         HttpStatusRange expectedStatus = new HttpStatusRange(callback.expectedHttpStatus);
@@ -205,7 +206,7 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
             return new BasicHeader(HttpHeaders.AUTHORIZATION, "Basic " + base64);
         }
         if (Type.BEARER == authentication.getType()) {
-            return new BasicHeader(HttpHeaders.AUTHORIZATION, "Bearer " + authentication.getPassword());
+            return new BasicHeader(HttpHeaders.AUTHORIZATION, "Bearer " + authentication.getToken());
         }
         throw new CallbackException("Unsupported authentication type '" + authentication.getType() + "'");
     }

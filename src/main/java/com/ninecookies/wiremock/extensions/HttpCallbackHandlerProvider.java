@@ -60,7 +60,7 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
                         Placeholders.transformValue(authentication.getPassword()));
             case BEARER:
                 return Authentication.of(
-                        Placeholders.transformValue(authentication.getPassword()));
+                        Placeholders.transformValue(authentication.getToken()));
             default:
                 throw new IllegalStateException("invalid authentication type: " + authentication.getType());
         }
