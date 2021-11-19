@@ -15,6 +15,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.jayway.restassured.RestAssured.given;
 import static com.ninecookies.wiremock.extensions.util.Maps.entry;
 import static com.ninecookies.wiremock.extensions.util.Maps.mapOf;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import java.time.Instant;
@@ -22,15 +23,20 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
+import org.apache.http.HttpHeaders;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.PurgeQueueRequest;
+import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
+import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.tomakehurst.wiremock.client.BasicCredentials;
 import com.github.tomakehurst.wiremock.common.Json;
+import com.ninecookies.wiremock.extensions.api.Authentication;
 import com.ninecookies.wiremock.extensions.api.Callback;
 import com.ninecookies.wiremock.extensions.api.Callbacks;
 
@@ -141,6 +147,88 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
                         .withStatus(201)));
 
         stubFor(post(urlEqualTo(callbackPath)).willReturn(aResponse().withStatus(204)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String id = Json.node(responseJson).get("id").textValue();
+        sleep();
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
+                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData.timestamp + "')]")));
+    }
+
+    @Test
+    public void testBearerAuthenticatedCallbackWithStubbing() throws InterruptedException {
+        String requestUrl = "/request/bearer-auth";
+        String callbackPath = "/callback/with-bearer-auth";
+        String bearerToken = "my-fancy-token";
+
+        String requestBody = "{\"code\":\"b63868c0\","
+                + "\"callbacks\":{\"order_dispatched\":\"http://localhost:" + SERVER_PORT + callbackPath + "\"},"
+                + "\"promised_delivery_at\":\"2019-03-14T16:09:19.748Z\","
+                + "\"preparation_time\":10,\"preparation_buffer\":2}";
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+        String callbackUrl = "$(request.callbacks.order_dispatched)";
+        CallbackData callbackData = CallbackData.of("aritrary-data");
+        Callback callback = Callback.of(DELAY, callbackUrl, callbackData);
+        callback.authentication = Authentication.of(bearerToken);
+
+        stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", Callbacks.of(callback))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        stubFor(post(urlEqualTo(callbackPath))
+                .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer " + bearerToken))
+                .willReturn(aResponse().withStatus(204)));
+
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String id = Json.node(responseJson).get("id").textValue();
+        sleep();
+        verify(1, postRequestedFor(urlEqualTo(callbackPath))
+                .withRequestBody(matchingJsonPath("$.[?(@.id == '" + id + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.value == '" + callbackData.value + "')]"))
+                .withRequestBody(matchingJsonPath("$.[?(@.timestamp == '" + callbackData.timestamp + "')]")));
+    }
+
+    @Test
+    public void testBearerAuthenticatedCallbackWithStubbingAndEnvToken() throws InterruptedException {
+        String requestUrl = "/request/bearer-auth";
+        String callbackPath = "/callback/with-env-bearer-auth";
+        String bearerToken = "$(!ENV[CBTOKEN])";
+
+        String requestBody = "{\"code\":\"b63868c0\","
+                + "\"callbacks\":{\"order_dispatched\":\"http://localhost:" + SERVER_PORT + callbackPath + "\"},"
+                + "\"promised_delivery_at\":\"2019-03-14T16:09:19.748Z\","
+                + "\"preparation_time\":10,\"preparation_buffer\":2}";
+        String responseBody = "{\"id\":\"$(!UUID)\"}";
+        String callbackUrl = "$(request.callbacks.order_dispatched)";
+        CallbackData callbackData = CallbackData.of("aritrary-data");
+        Callback callback = Callback.of(DELAY, callbackUrl, callbackData);
+        callback.authentication = Authentication.of(bearerToken);
+
+        stubFor(post(urlEqualTo(requestUrl))
+                .withPostServeAction("callback-simulator", Callbacks.of(callback))
+                .willReturn(aResponse()
+                        .withHeader("content-type", "application/json")
+                        .withBody(responseBody)
+                        .withTransformers("json-body-transformer")
+                        .withStatus(201)));
+
+        stubFor(post(urlEqualTo(callbackPath))
+                .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer callback-token"))
+                .willReturn(aResponse().withStatus(204)));
 
         String responseJson = given().body(requestBody).contentType("application/json")
                 .when().post(requestUrl)
@@ -582,6 +670,31 @@ public class CallbackSimulatorTest extends AbstractExtensionTest {
                 .withRequestBody(matchingJsonPath("$.[?(@.target == '" + callbackUrl + "')]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.response.status == " + callbackResponseStatus + ")]"))
                 .withRequestBody(matchingJsonPath("$.[?(@.response.body == '" + callbackResponseData + "')]")));
+    }
+
+    @Test
+    public void testSqsMessageCallback() {
+        String messageId = UUID.randomUUID().toString();
+        String requestUrl = "/request/sqs/callback";
+        String requestBody = "{\"code\":\"request-code\",\"messageId\":\"" + messageId + "\"}";
+        String responseJson = given().body(requestBody).contentType("application/json")
+                .when().post(requestUrl)
+                .then().statusCode(201)
+                .extract().asString();
+
+        String responseId = Json.node(responseJson).get("id").textValue();
+
+        ReceiveMessageResult messageResult = sqsClient.receiveMessage(
+                new ReceiveMessageRequest(sqsClient.getQueueUrl(QUEUE_NAME).getQueueUrl())
+                        .withWaitTimeSeconds(5));
+        assertEquals(messageResult.getMessages().size(), 1);
+
+        String messageText = messageResult.getMessages().get(0).getBody();
+        JsonNode message = Json.node(messageText);
+        assertEquals(message.get("response_id").textValue(), responseId);
+        assertEquals(message.get("request_code").textValue(), "request-code");
+        assertEquals(message.get("url_parts_1").textValue(), "sqs");
+        assertEquals(message.get("defined_value").textValue(), "from-mapping-file");
     }
 
     private void sleep() {

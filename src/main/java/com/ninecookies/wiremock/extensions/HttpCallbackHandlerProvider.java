@@ -44,9 +44,20 @@ public class HttpCallbackHandlerProvider extends AbstractCallbackHandlerProvider
         callbackDefinition.target = Placeholders.transformValue(placeholders, callback.url, true);
         callbackDefinition.data = Placeholders.transformJson(placeholders, Json.write(callback.data));
         if (callback.authentication != null) {
-            callbackDefinition.authentication = Authentication.of(
-                    Placeholders.transformValue(callback.authentication.getUsername()),
-                    Placeholders.transformValue(callback.authentication.getPassword()));
+            switch (callback.authentication.getType()) {
+                case BASIC:
+                    callbackDefinition.authentication = Authentication.of(
+                            Placeholders.transformValue(callback.authentication.getUsername()),
+                            Placeholders.transformValue(callback.authentication.getPassword()));
+                    break;
+                case BEARER:
+                    callbackDefinition.authentication = Authentication.of(
+                            Placeholders.transformValue(callback.authentication.getPassword()));
+                    break;
+                default:
+                    throw new IllegalStateException(
+                            "invalid authentication type: " + callback.authentication.getType());
+            }
         }
         callbackDefinition.traceId = (callback.traceId != null) ? callback.traceId
                 : UUID.randomUUID().toString().replace("-", "");

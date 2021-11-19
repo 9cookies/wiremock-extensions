@@ -15,9 +15,13 @@ public class Authentication {
      */
     public enum Type {
         /**
-         * The Basic authentication type.
+         * The Basic type for user name / password authentication.
          */
-        BASIC
+        BASIC,
+        /**
+         * The Bearer type for token authentication.
+         */
+        BEARER
     }
 
     private Type type = Type.BASIC;
@@ -63,6 +67,19 @@ public class Authentication {
         Authentication result = new Authentication();
         result.username = username;
         result.password = password;
+        return result;
+    }
+
+    /**
+     * Initialize a new instance of the {@link Authentication} with the specified argument.
+     *
+     * @param bearerToken
+     *            the authentication bearer token.
+     */
+    public static Authentication of(String bearerToken) {
+        Authentication result = new Authentication();
+        result.type = Type.BEARER;
+        result.password = bearerToken;
         return result;
     }
 }

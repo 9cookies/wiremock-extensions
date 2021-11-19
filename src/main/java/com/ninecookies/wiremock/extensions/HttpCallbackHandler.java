@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
@@ -34,6 +35,7 @@ import org.apache.http.util.EntityUtils;
 import com.github.tomakehurst.wiremock.common.Json;
 import com.ninecookies.wiremock.extensions.HttpCallbackHandler.HttpCallbackDefinition;
 import com.ninecookies.wiremock.extensions.api.Authentication;
+import com.ninecookies.wiremock.extensions.api.Authentication.Type;
 
 /**
  * Implements {@link Runnable} and uses {@link HttpPost} in combination with {@link HttpEntity} and
@@ -117,7 +119,9 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
         HttpContext context = createHttpContext(uri, callback.authentication);
         HttpPost post = createPostRequest(uri, (String) callback.data);
         post.addHeader(RPS_TRACEID_HEADER, callback.traceId);
-
+        if (callback.authentication != null && callback.authentication.getType() == Type.BEARER) {
+            post.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + callback.authentication.getPassword());
+        }
         CallbackResponse response = performRequest(post, context);
 
         HttpStatusRange expectedStatus = new HttpStatusRange(callback.expectedHttpStatus);
@@ -201,7 +205,9 @@ public class HttpCallbackHandler extends AbstractCallbackHandler<HttpCallbackDef
     }
 
     private HttpContext createHttpContext(URI uri, Authentication authentication) throws CallbackException {
-        if (authentication == null) {
+        if (authentication == null
+                // no HttpContext required for BEARER authentication
+                || authentication.getType() == Type.BEARER) {
             return null;
         }
 

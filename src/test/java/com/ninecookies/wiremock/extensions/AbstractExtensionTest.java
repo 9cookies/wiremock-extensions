@@ -30,6 +30,7 @@ public class AbstractExtensionTest {
         System.setProperty("org.slf4j.simpleLogger.log.com.ninecookies.wiremock.extensions", "debug");
         SystemUtil.setenv("CBUSER", "callback-user");
         SystemUtil.setenv("CBPASS", "callback-pass");
+        SystemUtil.setenv("CBTOKEN", "callback-token");
         SystemUtil.setenv("CALLBACK_QUEUE", "test-queue-name");
         SystemUtil.setenv("AWS_SQS_ENDPOINT", "http://localhost:" + SQS_PORT);
         SystemUtil.setenv("AWS_REGION", "us-east-1");
