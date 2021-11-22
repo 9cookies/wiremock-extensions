@@ -1,5 +1,23 @@
 # Change Log
 
+## 2021-mm-dd - <changes>
+
+Important Notes: - none
+
+Version: 0.4.2
+
+Author: - none
+
+### Features
+- none
+
+### Improvements
+- none
+
+### Fixes
+- none
+
+
 ## 2021-11-22 - Enhancement
 
 Important Notes: - none
