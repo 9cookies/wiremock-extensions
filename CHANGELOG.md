@@ -1,21 +1,15 @@
 # Change Log
 
-## 2021-mm-dd - <changes>
+## 2021-11-22 - Enhancement
 
 Important Notes: - none
 
 Version: 0.4.1
 
-Author: - none
+Author: M.Scheepers
 
-### Features
-- none
-
-### Improvements
-- none
-
-### Fixes
-- none
+### Enhancement
+- The callback-simulator now supports HTTP Bearer authentication
 
 
 ## 2021-09-08 - Features - Improvements - Dependencies
