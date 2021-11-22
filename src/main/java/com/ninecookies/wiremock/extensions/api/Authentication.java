@@ -15,14 +15,19 @@ public class Authentication {
      */
     public enum Type {
         /**
-         * The Basic authentication type.
+         * The Basic type for user name / password authentication.
          */
-        BASIC
+        BASIC,
+        /**
+         * The Bearer type for token authentication.
+         */
+        BEARER
     }
 
     private Type type = Type.BASIC;
     private String username;
     private String password;
+    private String token;
 
     /**
      * Gets the type.
@@ -34,7 +39,7 @@ public class Authentication {
     }
 
     /**
-     * Gets the user name.
+     * Gets the Basic authentication user name.
      *
      * @return the user name.
      */
@@ -43,7 +48,7 @@ public class Authentication {
     }
 
     /**
-     * Gets the password.
+     * Gets the Basic authentication password.
      *
      * @return the password.
      */
@@ -52,17 +57,39 @@ public class Authentication {
     }
 
     /**
+     * Gets the Bearer authentication token.
+     *
+     * @return the token.
+     */
+    public String getToken() {
+        return token;
+    }
+
+    /**
      * Initialize a new instance of the {@link Authentication} with the specified arguments.
      *
      * @param username
-     *            the authentication user name.
+     *            the Basic authentication user name.
      * @param password
-     *            the authentication password.
+     *            the Basic authentication password.
      */
     public static Authentication of(String username, String password) {
         Authentication result = new Authentication();
         result.username = username;
         result.password = password;
+        return result;
+    }
+
+    /**
+     * Initialize a new instance of the {@link Authentication} with the specified argument.
+     *
+     * @param bearerToken
+     *            the Bearer authentication token.
+     */
+    public static Authentication of(String bearerToken) {
+        Authentication result = new Authentication();
+        result.type = Type.BEARER;
+        result.token = bearerToken;
         return result;
     }
 }

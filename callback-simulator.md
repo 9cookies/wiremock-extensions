@@ -127,7 +127,7 @@ The only additional property for SQS callbacks is the `queue` and for SNS callba
 
 ### HTTP Callbacks
 
-HTTP provides some more properties compared to SQS. Beside the obvious required `url` also the optional support for `authentication` and request identification using a `traceId` is implemented. Similar to the topic or queue property for AWS SNS/SQS callbacks the `url`, `username` and `password` properties may contain placeholders and keywords. 
+HTTP provides some more properties compared to SQS. Beside the obvious required `url` also the optional support for Basic and Bearer `authentication` as well as request identification using a `traceId` is implemented. Similar to the topic or queue property for AWS SNS/SQS callbacks the `url` and `authentication` properties may contain placeholders and keywords.
 
 #### Request identification
 
@@ -140,6 +140,7 @@ The callback requests emitted by the callback-simulator will contain the `X-Rps-
     "delay": 10000,
     "url": "http://localhost:8080/my/listening/callback/url",
     "authentication":  {
+        "type": "BASIC",
         "username": "user",
         "password": "pass"
     },
@@ -155,8 +156,8 @@ The callback requests emitted by the callback-simulator will contain the `X-Rps-
     "delay": 10000,
     "url": "$(request.callbackUrl)",
     "authentication":  {
-        "username": "$(!ENV[CALLBACK_USER])",
-        "password": "$(!ENV[CALLBACK_PASSWORD])"
+        "type": "BEARER",
+        "token": "$(!ENV[BEARER_TOKEN])"
     },
     "traceId": "my-trace-identifier",
     "expectedHttpStatus": 400,
@@ -339,6 +340,7 @@ Similar in JSON
                     "delay": 10000,
                     "url": "http://localhost:8080/my/listening/callback/url",
                     "authentication":  {
+                      "type": "BASIC",
                       "username": "user",
                       "password": "pass"
                     },
@@ -355,7 +357,7 @@ Similar in JSON
 
 ### 3. Example - environment variables
 
-Callback configuration based on environment variables instead of having confidential information like username and password in a JSON mapping file.
+Callback configuration based on environment variables instead of having confidential information in a plain JSON mapping file.
 
 ```java
 // arbitrary JSON object that represents the payload to POST
@@ -403,6 +405,7 @@ Similar in JSON
                     "delay": 10000,
                     "url": "$(!ENV[CBURL])",
                     "authentication":  {
+                      "type": "BASIC",
                       "username": "$(!ENV[CBUSER])",
                       "password": "$(!ENV[CBPASS])"
                     },

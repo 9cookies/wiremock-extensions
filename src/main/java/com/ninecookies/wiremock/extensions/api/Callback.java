@@ -92,6 +92,25 @@ public class Callback {
     }
 
     /**
+     * Creates a new instance for a {@link Callback} definition.
+     *
+     * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
+     * @param url the destination URL for the callback's POST data.
+     * @param bearerToken the Bearer authentication token.
+     * @param data an arbitrary JSON object representing the callback data to POST.
+     * @return a new {@link Callback} instance ready to use.
+     */
+    public static Callback of(int delay, String url, String bearerToken, Object data) {
+        Callback result = new Callback();
+        result.delay = delay;
+        result.url = url;
+        result.data = data;
+        result.authentication = Authentication.of(bearerToken);
+        return result;
+
+    }
+
+    /**
      * Creates a new instance for a {@link Callback} definition with Basic authentication.
      *
      * @param delay the period of time in milliseconds to wait before the callback data is POSTed.
