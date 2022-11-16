@@ -27,7 +27,7 @@
 
         <wiremock.version>2.26.0</wiremock.version>
         <jsonpath.version>2.4.0</jsonpath.version>
-        <jackson.version>2.10.5.1</jackson.version>
+        <jackson.version>2.12.7.1</jackson.version>
         <slf4j.version>1.7.30</slf4j.version>
         <log4j.version>2.13.0</log4j.version>
         <log4j2-logstash.version>1.0.1</log4j2-logstash.version>
