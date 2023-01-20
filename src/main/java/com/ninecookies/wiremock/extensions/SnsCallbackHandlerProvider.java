@@ -28,6 +28,10 @@ public class SnsCallbackHandlerProvider extends AbstractCallbackHandlerProvider 
 
     @Override
     public boolean supports(Callback callback) {
+        // if the callback doesn't configure the topic it's not an SNS callback
+        if (Strings.isNullOrEmpty(callback.topic)) {
+            return false;
+        }
         if (!isMessagingEnabled()) {
             getLog().warn("sns callbacks disabled - ignore task to: '{}' with delay '{}' and data '{}'",
                     callback.topic, callback.delay, callback.data);

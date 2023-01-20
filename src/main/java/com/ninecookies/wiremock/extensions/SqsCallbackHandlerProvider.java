@@ -29,11 +29,15 @@ public class SqsCallbackHandlerProvider extends AbstractCallbackHandlerProvider 
 
     @Override
     public boolean supports(Callback callback) {
+        // if the callback doesn't configure the the queue it's not an SQS callback
+        if (Strings.isNullOrEmpty(callback.queue)) {
+            return false;
+        }
         if (!isMessagingEnabled()) {
             getLog().warn("sqs callbacks disabled - ignore task to: '{}' with delay '{}' and data '{}'",
                     callback.queue, callback.delay, callback.data);
         }
-        return !Strings.isNullOrEmpty(callback.queue) && isMessagingEnabled();
+        return isMessagingEnabled();
     }
 
     @Override
